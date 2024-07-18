@@ -1,0 +1,143 @@
+<html>
+  <head>
+    <title>S.A.S. 2024</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf8">
+    <meta http-equiv="Content-Type" content="text/html">
+    <script src = "https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src = "./matchesbadges.js"></script>
+
+    <style>
+body, html {
+  padding: 0;
+  margin: 0;
+  overflow-x: hidden;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+.slide {
+  position: absolute;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  width: 100%;
+  height: calc(100vh - 70px);
+  overflow: auto;
+  padding: 70 70 0 0;
+  top: 0;
+  left: 0;
+  transition-duration: .4s;
+}
+
+#menuPanel {
+  position: absolute;
+  top: 70px;
+  left: 0px;
+  background-color: rgba(240, 240, 240, 0.3);
+  transition-duration: .4s;
+  z-index: 23;
+}
+
+#menuPanel * {
+  display: block;
+}
+.right {
+  transform: translate(100%);
+}
+.left {
+  transform: translate(-100%);
+}
+
+#menuButton {
+  background-color: rgba(192, 192, 192, 0.75);
+  border: none;
+  color: white;
+  padding: 5px 5px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline;
+  margin: 3px, 3px;
+}
+
+#titlebar {
+  position: absolute;
+  text-align: left;
+  top: 0;
+  left: 0;
+  width: 100%;
+  border: none;
+  padding: 2;
+  background-color: rgba(128,128,128,0.75);
+  font-size: 3rem;
+  z-index: 23;
+}
+
+.content {
+  width: calc(100vw - 160px);
+  height: calc(100vh - 160px);
+  position: absolute;  
+  top: 70px;
+  left: 80px;
+  bottom: 70px;
+  overflow-y: scroll;
+}
+
+.content table {
+  text-align: center;
+  align-content: center;
+}
+
+.content * {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+.bg1 {
+  background-image: url(./img/1.jpeg);
+}
+.bg2 {
+  background-image: url(./img/2.jpeg);
+}
+    </style>
+  </head>
+  <body>
+    <span id="titlebar">
+      <button id="menuButton">
+       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+          <line x1="5" y1="9" x2="36" y2="9" style="stroke:#000000;stroke-width:5" />
+          <line x1="5" y1="17" x2="36" y2="17" style="stroke:#000000;stroke-width:5" />
+          <line x1="5" y1="25" x2="36" y2="25" style="stroke:#000000;stroke-width:5" />
+          <line x1="5" y1="33" x2="36" y2="33" style="stroke:#000000;stroke-width:5" />
+          <line x1="4" y1="8" x2="35" y2="8" style="stroke:#FFFFFF;stroke-width:5" />
+          <line x1="4" y1="16" x2="35" y2="16" style="stroke:#FFFFFF;stroke-width:5" />
+          <line x1="4" y1="24" x2="35" y2="24" style="stroke:#FFFFFF;stroke-width:5" />
+          <line x1="4" y1="32" x2="35" y2="32" style="stroke:#FFFFFF;stroke-width:5" />
+        </svg>
+      </button><span class="title">S.A.S 2024</span></span>
+      <div id="menuPanel" class="left">
+        <button id="btMatches">Lista de Jogos</button>
+        <button id="btTable">Classificação</button>
+        <button id="btResult">Resultado</button>
+        <button id="btGraph">Gráficos</button>
+        <div>-</div>
+        <button id="ntNewSim">Nova simulação</button>
+      </div>
+      <div class="slide bg1"><div id="divMatches" class="content">Blablabla</div></div>
+      <div class="slide bg2 right">
+        <div class="content">
+          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 6080">
+            <rect x="10" y="10" width="60" height="6060" style="fill:rgba(255,255,255,0.1);stroke-width:2;stroke:#000000" />
+            <line x1="30" y1="10" x2="30" y2="70" style="stroke:#000000;stroke-width:2" />
+            <line x1="50" y1="10" x2="50" y2="70" style="stroke:#000000;stroke-width:2" />
+            <line x1="10" y1="30" x2="70" y2="30" style="stroke:#000000;stroke-width:2" />
+            <line x1="10" y1="50" x2="70" y2="50" style="stroke:#000000;stroke-width:2" />
+          </svg>
+        </div>
+      </div>  
+
+
+
+      <div class="footer"></div>
+  </body>
+</html>
