@@ -27,14 +27,14 @@ if (isset($_POST['number'])){
     echo "ok!";
     
 } else {
-    $query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament');
+    $query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament order by done desc, date != "" desc, date asc');
     $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
     if ($query->execute()) {
         $gameList = $query->fetchAll(PDO::FETCH_CLASS);
     } else {
         echo "error\n";
     }
-}
+
 ?>
 <html>
     <script>
@@ -59,10 +59,12 @@ if (isset($_POST['number'])){
                 element.addEventListener('click', handler);
                 
             });
-
-            document.querySelector("form").addEventListener("submit", (event) => {
+            let form = document.querySelector("form");
+            form.addEventListener("submit", (event) => {
                 event.preventDefault();
-                const formData = new FormData(this);
+                document.querySelector("#done").value = 
+                    (document.querySelector("#homeScore") == "" || document.querySelector("#awayScore").value == "")?0:1;
+                const formData = new FormData(form);
                 fetch('orc.php', {
                     method: 'POST',
                     body: formData
@@ -108,10 +110,13 @@ if (isset($_POST['number'])){
                     <input type="number" min="0" name="awayScore" id="awayScore" value="">
                     <span id="awayTeam"></span>
                     <input type="text" name="date" id="date">
-                    <input type="number" name="done" id="done" min="0" max="1">
+                    <input type="hidden" name="done" id="done">
                     <input type="submit">
                 </i>
             </dialog>
         </table>
     </body>
-</html>
+    </html>
+<?php 
+}
+?>
