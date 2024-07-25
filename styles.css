@@ -1,0 +1,134 @@
+body, html {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  overflow-x: hidden;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+.slide {
+  display: flex;
+  justify-content: flex-start;
+  flex-direction: column;
+  position: absolute;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  width: 100%;
+  height: calc(100vh - 70px);
+  overflow: auto; 
+  padding: 70px 0 0 0;
+  top: 0;
+  left: 0;
+  transition-duration: .4s;
+  align-items: center;
+  z-index: 0;
+}
+
+.content {
+  display: flex;
+  width: calc(100vw - 0px);
+  height: calc(100vh - 70px);
+  position: absolute;
+  top: 70px;
+  overflow-y: scroll;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+#menuPanel {
+  position: absolute;
+  top: 70px;
+  left: 0px;
+  background-color: rgba(240, 240, 240, 0.3);
+  transition-duration: .4s;
+  z-index: 23;
+}
+
+#menuPanel * {
+  display: block;
+}
+.right {
+  transform: translate(100%);
+}
+.left {
+  transform: translate(-100%);
+}
+
+#menuButton {
+  background-color: rgba(192, 192, 192, 0.75);
+  border: none;
+  color: white;
+  padding: 5px 5px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline;
+  margin: 3px, 3px;
+}
+
+#titlebar {
+  position: absolute;
+  display: flex;
+  flex-direction: row;
+  text-align: left;
+  width: 100%;
+  border: none;
+  padding: 1;
+  background-color: rgba(128,128,128,0.75);
+  font-size: 3rem;
+  z-index: 23;
+}
+
+
+
+.content table {
+  text-align: center;
+  align-content: center;
+}
+.content canvas {
+  background-color: rgba(239, 239, 239, 0.60);
+}
+
+.content * {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+.bg1 {
+  background-image: url(./img/1.jpeg);
+}
+.bg2 {
+  background-image: url(./img/2.jpeg);
+}
+.bg3 {
+    background-image: url(./img/3.jpeg);
+}
+.bg4 {
+    background-image: url(./img/4.jpeg);
+}
+.bg5 {
+    background-image: url(./img/5.jpeg);
+}
+
+div#viewArea {
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+}
+
+h3, h2 {
+  padding-top: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+div#graphTopPanel {
+  display: flex;
+  flex-direction: row;
+}
+
+
