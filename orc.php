@@ -24,20 +24,17 @@ if (isset($_POST['number'])){
     $query->bindValue(':date', $_POST['date'], PDO::PARAM_STR);
     $query->bindValue(':done', $_POST['done'], PDO::PARAM_INT);
     $query->execute();
-
-}
-
-
-
-
-$query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament');
-$query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
-if ($query->execute()) {
-    $gameList = $query->fetchAll(PDO::FETCH_CLASS);
+    echo "ok!";
+    
 } else {
-    echo "error\n";
+    $query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament');
+    $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
+    if ($query->execute()) {
+        $gameList = $query->fetchAll(PDO::FETCH_CLASS);
+    } else {
+        echo "error\n";
+    }
 }
-
 ?>
 <html>
     <script>
@@ -64,7 +61,30 @@ if ($query->execute()) {
             });
 
             document.querySelector("form").addEventListener("submit", (event) => {
-                document.querySelector("#editDialog").close();
+                event.preventDefault();
+                const formData = new FormData(this);
+                fetch('orc.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);
+                    let rows = document.querySelectorAll('tr');
+                    for(row of rows) {
+                        if(row.children[0].innerHTML == document.querySelector('#numberSpan').innerHTML){
+                            row.children[2].innerHTML = document.querySelector("#homeScore").value ;
+                            row.children[4].innerHTML = document.querySelector("#awayScore").value ;
+                            row.children[6].innerHTML = document.querySelector("#date").value;
+                            row.children[7].innerHTML = document.querySelector("#done").value;
+                            document.querySelector("#editDialog").close();
+                            break;
+                        }
+                    }
+
+                })
+                .catch(error => console.log(error));
+
             });
         });
     </script>
