@@ -75,6 +75,7 @@ class Team {
   goalsFor = 0;
   goalsAgainst = 0;
   goalDiff = 0;
+  matches = 0;
   name = "";
     
   constructor(name) {
@@ -85,6 +86,7 @@ class Team {
     this.goalsAgainst = 0;
     this.goalsFor = 0;
     this.goalDiff = 0;
+    this.matches = 0;
   } 
   
   compareTo(other) {
@@ -92,6 +94,14 @@ class Team {
   }
 }
 
+
+/**
+ *  Updates homeTeam and awayTeam ratings and campaign given respective scores
+ *  @param homeTeam a Team
+ *  @param awayTeam a Team
+ *  @param homeScore integer
+ *  @param awayScore integer
+ */
 function computeMatch(homeTeam, awayTeam, homeScore, awayScore) {
   let homePoints = 0;
   let awayPoints = 0; 
@@ -117,7 +127,7 @@ function computeMatch(homeTeam, awayTeam, homeScore, awayScore) {
   if (goalDiff == 2) factor = 1.5;
   if (goalDiff == 3) factor = 1.75;
   if (goalDiff > 3) factor = (1.75 + ((goalDiff - 3.0) / 8.0));
-
+  homeTeam.matches += 1;
   homeTeam.goalsFor += homeScore;
   homeTeam.goalsAgainst += awayScore;
   homeTeam.goalDiff = homeTeam.goalsFor - homeTeam.goalsAgainst;
@@ -250,9 +260,9 @@ function displayRatings(ratings){
   for (let i = 0; i < ratings.length; i++){
     let t = ratings[i];
     let badge = badgesDictionary[t.name];
-    rows.push(`<tr><td>${i+1}</td><td><img height='40' width='40' src='${badge}' alt='${t.name}'></img</td><td>${t.rating.toFixed(2)}</td><td>${t.points}</td><td>${t.wins}</td><td>${t.goalDiff}</td><td>${t.goalsFor}</td></tr>`);
+    rows.push(`<tr><td>${i+1}</td><td><img height='40' width='40' src='${badge}' alt='${t.name}'></img</td><td>${t.rating.toFixed(2)}</td><td>${t.points}</td><td>${t.wins}</td><td>${t.goalDiff}</td><td>${t.goalsFor}</td><td>${t.matches}</td></tr>`);
   }
-  let table = "<h2>Ratings e Campanha</h2><table border='1'><tr><th>#</th><th>Time</th><th>Rating</th><th>PG</th><th>Vitórias</th><th>Saldo</th><th>Gols pró</th></tr>" + rows.join("") + "</table>";
+  let table = "<h2>Ratings e Campanha</h2><table border='1'><tr><th>#</th><th>Time</th><th>Rating</th><th>PG</th><th>V</th><th>SG</th><th>GP</th><th>J</th></tr>" + rows.join("") + "</table>";
   document.getElementById("divRatings").innerHTML = table;
   
 }
@@ -679,6 +689,7 @@ function messageFromWorker(event) {
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {
+    //comportamento do menu de navegação:
     document.querySelector("#menuButton").addEventListener('click', (e) => {
       let menuPanel = document.querySelector("#menuPanel");
       if (menuPanel.classList.contains("left")) {
@@ -705,6 +716,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
     displayListOfMatches(listOfMatches);
     let [ranking, realCampaign] = computePastMatches(listOfMatches);
+    console.log("realCampaign: ", realCampaign);
     const upcomingMatches = listOfMatches.filter(match => !match.done);
     displayRatings(ranking);
     let [ mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
