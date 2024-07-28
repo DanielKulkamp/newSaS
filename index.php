@@ -32,7 +32,7 @@ try {
       //list($gameList, $errors) = $miner->atualizaJogos($pdo);
       //$miner->cadastraEscudos($pdo);
   //} 
-  $query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament');
+  $query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament order by done desc, date != "" desc, date asc');
   $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
   if ($query->execute()) {
       $gameList = $query->fetchAll(PDO::FETCH_CLASS);
@@ -64,7 +64,7 @@ try {
         let listOfMatches = <?php echo json_encode($gameList) ?>; 
         let badgesDictionary = <?php echo json_encode($badges) ?>;
     </script>
-    <script src="scriptnew.js"></script>
+    <script type="module" src="scriptnew.js"></script>
     <link rel="stylesheet" href="styles.css">
    
   </head>
@@ -81,7 +81,7 @@ try {
           <line x1="4" y1="24" x2="35" y2="24" style="stroke:#FFFFFF;stroke-width:5" />
           <line x1="4" y1="32" x2="35" y2="32" style="stroke:#FFFFFF;stroke-width:5" />
         </svg>
-      </button><span class="title">S.A.S 2024</span>
+        </button><span class="title" tournament="<?php echo $tournament; ?>">S.A.S 2024</span>
     </header>
       <div id="menuPanel" class="left">
         <button class="menuItemButton" id="btMatches">Lista de Jogos</button>
@@ -90,7 +90,7 @@ try {
         <button class="menuItemButton" id="btResult">Resultado</button>
         <button class="menuItemButton" id="btGraph">Gráficos</button>
         <div>-</div>
-        <button id="ntNewSim">Nova simulação</button>
+        <button id="btNewSim">Nova simulação</button>
       </div>
       <div id="viewArea">
         <div class="slide bg1"><div id="divMatches" class="content">Blablabla</div></div>
@@ -107,6 +107,11 @@ try {
         </div>
 
       </div>
+      <dialog id="progDialog">
+        <h1>Simulação em andamento</h1>
+        <label for="simProg">Avanço:</label>
+        <progress id="simProg" max="100" value="0"></progress>
+      </dialog>
 
 
   </body>

@@ -1,270 +1,43 @@
-const DIVISOR_ELO = 400.0;
-const IMPORTANCE = 30.0;
-const N_SIMS = 5_000;
-const HFA = 40;
-const PCT_VITORIA_SALDO_5 = 0.01;
-const PCT_VITORIA_SALDO_4 = 0.06;
-const PCT_VITORIA_SALDO_3 = 0.17;
-const PCT_VITORIA_SALDO_2 = 0.45;
-const PCT_EMPATE_0 = 0.35;
-const PCT_EMPATE_1 = 0.89;
-const PCT_EMPATE_2 = 0.99;
-const PCT_DERROTA_1 = 0.80;
-const PCT_DERROTA_2 = 0.99;
-const N_RUNS = 40;
-const RUNS = [];
+import { DIVISOR_ELO, IMPORTANCE, N_SIMS, HFA, PCT_VITORIA_SALDO_5, PCT_VITORIA_SALDO_4, PCT_VITORIA_SALDO_3, PCT_VITORIA_SALDO_2, PCT_EMPATE_0, PCT_EMPATE_1, PCT_EMPATE_2, PCT_DERROTA_1 , PCT_DERROTA_2, N_RUNS, RUNS, Summary, expectancy, compareTeams, Team, computeMatch, simulateMatchELOHFA, computePastMatches} from './base.js';
+
 var chart;
-
-class Summary {
-  constructor(nome) {
-    this.nome = nome;
-    this.titulos = 0;
-    this.g4s = 0;
-    this.z4s = 0;
-    this.histograma = new Array(20).fill(0);
-    this.histPontos = new Array(38*3+1).fill(0);
-  }
-  compareTo(other) {
-    if (this.titulos > other.titulos) return -1;
-    if (this.titulos < other.titulos) return 1;
-    if (this.g4s > other.g4s) return -1;
-    if (this.g4s < other.g4s) return 1;
-    if (this.z4s > other.z4s) return 1;
-    if (this.z4s < other.z4s) return -1;
-    return 0;
-  }
-}
-
-function expectancy(casa, fora) {
-  const deltaRating = casa.rating + HFA - fora.rating;
-  const divisor = 1 + Math.pow(10, -deltaRating / DIVISOR_ELO) + Math.pow(10, deltaRating / DIVISOR_ELO);
-  let win = Math.pow(10, deltaRating / DIVISOR_ELO) / divisor;
-  let draw = 1 / divisor;
-  let loss = 1 - win - draw;
-  return [win, draw, loss]
-}
-
-class Expectancy {
-  constructor(casa, fora) {
-    const deltaRating = casa.rating + HFA - fora.rating;
-    const divisor = 1 + Math.pow(10, -deltaRating / DIVISOR_ELO) + Math.pow(10, deltaRating / DIVISOR_ELO);
-    this.win = Math.pow(10, deltaRating / DIVISOR_ELO) / divisor;
-    this.draw = 1 / divisor;
-    this.loss = 1 - this.win - this.draw;
-  }
-}
-
-function compareTeams(one, other){
-  if (one.points > other.points) return -1;
-  if (one.points < other.points) return 1;
-  if (one.wins > other.wins) return -1;
-  if (one.wins < other.wins) return 1;
-  if (one.goalDiff > other.goalDiff) return -1;
-  if (one.goalDiff < other.goalDiff) return 1;
-  if (one.goalsFor > other.goalsFor) return -1;
-  if (one.goalsFor < other.goalsFor) return 1;
-  return 0; 
-}
-
-
-class Team {
-  static INITIAL_RATING = 1000.0;
-  points = 0;
-  wins = 0;
-  rating = Team.INITIAL_RATING;
-  goalsFor = 0;
-  goalsAgainst = 0;
-  goalDiff = 0;
-  matches = 0;
-  name = "";
-    
-  constructor(name) {
-    this.name = name;
-    this.wins = 0;
-    this.points = 0;
-    this.rating = Team.INITIAL_RATING;
-    this.goalsAgainst = 0;
-    this.goalsFor = 0;
-    this.goalDiff = 0;
-    this.matches = 0;
-  } 
-  
-  compareTo(other) {
-    return compareTeams(this, other);
-  }
-}
-
-
-/**
- *  Updates homeTeam and awayTeam ratings and campaign given respective scores
- *  @param homeTeam a Team
- *  @param awayTeam a Team
- *  @param homeScore integer
- *  @param awayScore integer
- */
-function computeMatch(homeTeam, awayTeam, homeScore, awayScore) {
-  let homePoints = 0;
-  let awayPoints = 0; 
-  let homeWins = 0;
-  let awayWins = 0;
-  let result = 0.5;
-  
-  if (homeScore > awayScore) {
-    homePoints = 3;
-    homeWins = 1;
-    result = 1;
-  } else if (homeScore == awayScore) {
-    homePoints = 1;
-    awayPoints = 1;
-  } else {
-    awayPoints = 3;
-    awayWins = 1;
-    result = 0;
-  }
-
-  const goalDiff = Math.abs(homeScore - awayScore);
-  let factor = 1;
-  if (goalDiff == 2) factor = 1.5;
-  if (goalDiff == 3) factor = 1.75;
-  if (goalDiff > 3) factor = (1.75 + ((goalDiff - 3.0) / 8.0));
-  homeTeam.matches += 1;
-  homeTeam.goalsFor += homeScore;
-  homeTeam.goalsAgainst += awayScore;
-  homeTeam.goalDiff = homeTeam.goalsFor - homeTeam.goalsAgainst;
-  homeTeam.points += homePoints;
-  homeTeam.wins += homeWins;
-
-  awayTeam.goalsFor += awayScore;
-  awayTeam.goalsAgainst += homeScore;
-  awayTeam.goalDiff = awayTeam.goalsFor - awayTeam.goalsAgainst;
-  awayTeam.points += awayPoints;
-  awayTeam.wins += awayWins;
-  
-  const deltaRating = homeTeam.rating - awayTeam.rating +HFA;
-  const winExpectancy = (1 / (1 + Math.pow(10, -(deltaRating) / DIVISOR_ELO)));
-  const adjust = IMPORTANCE * factor * (result - winExpectancy);
-  homeTeam.rating += adjust;
-  awayTeam.rating -= adjust;
-
-
-}
-
-function simulateMatchELOHFA(casa, fora) {
-  let [winExpectancy, drawExpectancy] = expectancy(casa, fora);
-  //const exp = new Expectancy(casa, fora);
-  //const winExpectancy = exp.win;
-  //const drawExpectancy = exp.draw;
-  const alea = Math.random();
-  const alea2 = Math.random();
-  let homeScore = 0;
-  let awayScore = 0;
-  
-  if (alea < winExpectancy * PCT_VITORIA_SALDO_5) {
-    homeScore = 5;
-    awayScore = 0;
-  } else if (alea < winExpectancy * PCT_VITORIA_SALDO_4) {
-    if (alea2 < 0.9) {
-      homeScore = 4;
-      awayScore = 0;    
-    } else{
-      homeScore = 5;
-      awayScore = 1;
-    }
-  } else if (alea < winExpectancy * PCT_VITORIA_SALDO_3) {
-    homeScore = 3;
-    awayScore = 1;
-    if ((alea2 > 0.7) && (alea2 < 0.95)) {
-      homeScore = 4;
-      awayScore = 1;
-    }
-    if (alea2 > 0.95) {
-      homeScore = 5
-      awayScore = 2
-    }
-  } else if (alea < winExpectancy * PCT_VITORIA_SALDO_2) {
-    homeScore = 2;
-    awayScore = 0;
-    if ((alea2 > 0.70) && (alea2 < 0.95)) {
-      homeScore = 3;
-      awayScore = 1;
-    }
-    if (alea2 > 0.95) {
-      homeScore = 4;
-      awayScore = 2;
-    }
-
-  } else if (alea < winExpectancy) {
-    homeScore = 1;
-    awayScore = 0;
-    if ((alea2 > 0.60) && (alea2 < 0.95)) {
-      homeScore = 2;
-      awayScore = 1;
-    }
-    if (alea2 > 0.95) {
-      homeScore = 3;
-      awayScore = 2;
-    }
-    if (alea2 > 0.99) {
-      homeScore = 4;
-      awayScore = 3;
-    }
-    
-  } else if (alea - winExpectancy < drawExpectancy) {
-      homeScore = 0;
-      awayScore = 0;
-      if ((alea2 > 0.60) && (alea2 < 0.95)) {
-        homeScore = 1;
-        awayScore = 1;
-      }
-      if (alea2 > 0.95) {
-        homeScore = 2;
-        awayScore = 2;
-      }
-  } else {
-    if (Math.random() < PCT_DERROTA_1) {
-      homeScore = 0;
-      awayScore = 1;
-      if ((alea2 > 0.60) && (alea2 < 0.95)) {
-        homeScore = 1;
-        awayScore = 2;
-      }
-      if (alea2 > 0.95) {
-        homeScore = 2;
-        awayScore = 3;
-      }            
-    } else {
-          homeScore = 0;
-          awayScore = 2;
-          if ((alea2 > 0.60) && (alea2 < 0.95)) {
-            homeScore = 1;
-            awayScore = 3;
-          }
-          if (alea2 > 0.95) {
-            homeScore = 2;
-            awayScore = 4;
-          }
-    }
-  }
-  return [ homeScore, awayScore];  
-}
-
-
 
 /**
  * Updates the ratings and campaign panel 
  * @param {*} ratings : an array of Team sorted by ratings
  */
-
 function displayRatings(ratings){
   let rows = [];
   for (let i = 0; i < ratings.length; i++){
     let t = ratings[i];
     let badge = badgesDictionary[t.name];
-    rows.push(`<tr><td>${i+1}</td><td><img height='40' width='40' src='${badge}' alt='${t.name}'></img</td><td>${t.rating.toFixed(2)}</td><td>${t.points}</td><td>${t.wins}</td><td>${t.goalDiff}</td><td>${t.goalsFor}</td><td>${t.matches}</td></tr>`);
+    rows.push(
+      `<tr>
+        <td>${i+1}</td>
+        <td><img height='40' width='40' src='${badge}' alt='${t.name}'></img</td>
+        <td>${t.rating.toFixed(2)}</td>
+        <td>${t.points}</td>
+        <td>${t.matches}</td>
+        <td>${t.wins}</td>
+        <td>${t.goalDiff}</td>
+        <td>${t.goalsFor}</td>
+        <td>${t.goalsFor-t.goalDiff}</td>
+      </tr>`);
   }
-  let table = "<h2>Ratings e Campanha</h2><table border='1'><tr><th>#</th><th>Time</th><th>Rating</th><th>PG</th><th>V</th><th>SG</th><th>GP</th><th>J</th></tr>" + rows.join("") + "</table>";
+  let table = `<h2>Ratings e Campanha</h2>
+      <table border='1'>
+      <tr>
+        <th>#</th>
+        <th>Time</th>
+        <th>Rating</th>
+        <th>PG</th>
+        <th>J</th>
+        <th>V</th>
+        <th>SG</th>
+        <th>GP</th>
+        <th>GC</th>
+      </tr>` + rows.join("") + "</table>";
   document.getElementById("divRatings").innerHTML = table;
-  
 }
 
 function enableEditGame(event){
@@ -327,15 +100,16 @@ function displayListOfMatches(listOfMatches) {
   });
   table += "</table>";
   document.getElementById("divMatches").innerHTML = table;
-  document.getElementById(`jogo${firstUndone.number}`).scrollIntoView({ behavior: 'smooth' });
-  for( button of  document.getElementsByClassName("editMatchButton") ) {
+  let number = firstUndone?firstUndone.number:lastDoneMatch.number;
+  document.getElementById(`jogo${number}`).scrollIntoView({ behavior: 'smooth' });
+  for(let button of  document.getElementsByClassName("editMatchButton") ) {
     button.addEventListener('click', enableEditGame);
 
   }
 }
 
 function displayNextMatches(homeTeams, awayTeams, expectancies){
-  rows = homeTeams.map((homeTeam, i) => {return `
+  let rows = homeTeams.map((homeTeam, i) => {return `
     <tr>
       <td><img height='40' width='40' src='${badgesDictionary[homeTeam.name]}' title='${homeTeam.name}'></img></td>
       <td>${homeTeam.rating.toFixed(2)}</td>
@@ -360,35 +134,6 @@ function displayNextMatches(homeTeams, awayTeams, expectancies){
   
   document.getElementById("divNextMatches").innerHTML = table;
 
-}
-
-/**
- * Computes ratings and campaigns from a list of matches.
- * @param {[Object]} alistOfMatches : an array of matches 
- * @returns [ranking, realCampaign] : um array com um array de times ordenado por rating e um dicionário dos nomesDostimes -> campanhas
- */
-function computePastMatches(alistOfMatches) {
-    const pastMatches = alistOfMatches.filter(match => match.done);
-    
-    let realCampaign = new Map();
-    for (let aMatch of pastMatches) {
-        if (!realCampaign.has(aMatch.homeTeam)) {
-          realCampaign.set(aMatch.homeTeam, new Team(aMatch.homeTeam));
-        }
-        if (!realCampaign.has(aMatch.awayTeam)) {
-          realCampaign.set(aMatch.awayTeam, new Team(aMatch.awayTeam));
-        }
-        let tCasa = realCampaign.get(aMatch.homeTeam);
-        let tFora = realCampaign.get(aMatch.awayTeam);
-        computeMatch(tCasa, tFora, parseInt(aMatch.homeScore), parseInt(aMatch.awayScore));
-    }
-
-    const ranking = [];
-    for ([name, team] of realCampaign) {
-        ranking.push(team);
-    }
-    ranking.sort((a, b) => b.rating - a.rating);
-    return [ranking, realCampaign];
 }
 
 /**
@@ -419,8 +164,8 @@ function calculateNextExpectancies(upcomingMatches, realCampaign){
     return [ mandantes, visitantes, expectancies];
 }
 
+
 function displaySummary(summary, n_sims){
-    console.log(summary, n_sims);
     let table = `<h2>Resumo da Simulação</h2>
                     <table border='1'>
                     <tr><th>#</th><th>Time</th>
@@ -517,11 +262,6 @@ function displayGraphs(summary){
               text: 'Probabilidade (%)'
             }
           },
-          yAxes: [{
-            ticks: {
-              beginAtZero: true
-            }
-          }]
         }
       };
 
@@ -580,20 +320,21 @@ function displayGraphs(summary){
           x: {
             title: {
               display: true,
-              text: 'Pontos'
+              txt: 'Pontos'
             }
           },
           y: {
             title: {
               display: true,
               text: 'Probabilidade (%)'
-            }
+            },
+            beginAtZero: true
           }, 
-          yAxes: [{
-            ticks: {
-              beginAtZero: true
-            }
-          }]
+          //yAxis: [{
+          //  ticks: {
+          //    beginAtZero: true
+          //  }
+          //}]
         }
       };
 
@@ -639,7 +380,6 @@ const clickHandler = (clickEvent) => {
 
 function showPanel(id) {
   const element = document.querySelector(id).parentElement;
-  console.log(element);
   element.classList.remove("left");
   element.classList.remove("right");
   let sibling = element.previousElementSibling;
@@ -662,16 +402,17 @@ function messageFromWorker(event) {
   if (data[0] == 'done') {
     RUNS.push(data[1]);
     if (RUNS.length == N_RUNS) {
+      document.querySelector("#progDialog").close();
       let consolidado = RUNS.reduce ((acc, curr, index, arr) => {
         let newAcc = [];
-        for (item of curr){
+        for (let item of curr){
           let itemInAcc = acc.filter(x => x.nome == item.nome)[0];
           item.titulos += itemInAcc.titulos;
           item.z4s += itemInAcc.z4s;
-          for (val in item.histograma) {
+          for (let val in item.histograma) {
             item.histograma[val] += itemInAcc.histograma[val];
           }
-          for (pts in item.histPontos) {
+          for (let pts in item.histPontos) {
             item.histPontos[pts] += itemInAcc.histPontos[pts];
           }
           newAcc.push(item);
@@ -683,10 +424,29 @@ function messageFromWorker(event) {
     }
   }
   if (data[0]== 'progress') {
-    console.log("progress from worker: ", event);
+    let prog = document.querySelector("#simProg");
+    prog.value = parseFloat(prog.value)+5/N_RUNS;
+    
   }
 
 }
+
+function runSimulation() {
+    let [ranking, realCampaign] = computePastMatches(listOfMatches);
+    const upcomingMatches = listOfMatches.filter(match => !match.done);
+    displayRatings(ranking);
+    let [ mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
+    displayNextMatches(mandantes, visitantes, expectancies);
+    RUNS.length = 0;
+    document.querySelector("#simProg").value = 0;
+    document.querySelector("#progDialog").showModal();
+    for (let i = 0; i < N_RUNS; i++){
+      let worker = new Worker("worker.js", {type: 'module'});
+      worker.onmessage = messageFromWorker;
+      worker.postMessage(['run', upcomingMatches, realCampaign, N_SIMS]);
+    }
+}
+
 
 document.addEventListener('DOMContentLoaded', (event) => {
     //comportamento do menu de navegação:
@@ -702,30 +462,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     document.querySelectorAll(".menuItemButton").forEach(x => (
       x.addEventListener('click', clickHandler)
     ));
-    listOfMatches.sort((a, b) => {
-      if (a.date == null) { 
-        if (b.date == null) return b.done - a.done;
-        else return 1; // b > a
-      } 
-      if (b.date == null) {
-        return -1;
-      }
-      if (a.date > b.date) return 1;
-      if (a.date == b.date) return a.number - b.number;
-      return -1;
-    });
+    document.querySelector("#btNewSim").addEventListener('click', runSimulation);
     displayListOfMatches(listOfMatches);
-    let [ranking, realCampaign] = computePastMatches(listOfMatches);
-    console.log("realCampaign: ", realCampaign);
-    const upcomingMatches = listOfMatches.filter(match => !match.done);
-    displayRatings(ranking);
-    let [ mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
-    displayNextMatches(mandantes, visitantes, expectancies);
-    for (let i = 0; i < N_RUNS; i++){
-      let worker = new Worker("worker.js");
-      worker.onmessage = messageFromWorker;
-      worker.postMessage(['run', upcomingMatches, realCampaign, N_SIMS]);
-    }
-        
-
+    runSimulation();
 });
