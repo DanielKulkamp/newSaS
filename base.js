@@ -49,16 +49,6 @@ export function expectancy(casa, fora) {
   return [win, draw, loss]
 }
 
-export class Expectancy {
-  constructor(casa, fora) {
-    const deltaRating = casa.rating + HFA - fora.rating;
-    const divisor = 1 + Math.pow(10, -deltaRating / DIVISOR_ELO) + Math.pow(10, deltaRating / DIVISOR_ELO);
-    this.win = Math.pow(10, deltaRating / DIVISOR_ELO) / divisor;
-    this.draw = 1 / divisor;
-    this.loss = 1 - this.win - this.draw;
-  }
-}
-
 export function compareTeams(one, other){
   if (one.points > other.points) return -1;
   if (one.points < other.points) return 1;

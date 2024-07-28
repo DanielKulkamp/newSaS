@@ -55,6 +55,7 @@ try {
 ?>
 <html>
   <head>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <title>S.A.S. 2024</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf8">
@@ -89,6 +90,7 @@ try {
         <button class="menuItemButton" id="btTable">Classificação</button>
         <button class="menuItemButton" id="btResult">Resultado</button>
         <button class="menuItemButton" id="btGraph">Gráficos</button>
+        <button class="menuItemButton" id="btConfig">Configuração</button>
         <div>-</div>
         <button id="btNewSim">Nova simulação</button>
       </div>
@@ -105,7 +107,13 @@ try {
           <h2 id="graph-title"></h2>
           <canvas id="histogram-chart"></canvas></div>
         </div>
-
+        <div class="slide right" id="config">
+          <label for="matchesToIgnore">Desconsiderar últimos n jogos:</label>
+          <input type="number" value="0" maxlength="3">
+          <label for="method">Método</label>
+          <select id="method"></select><button id="applyConfig">Aplicar</button>
+        </div>
+        <div class="slide right" id="hidden"></div>
       </div>
       <dialog id="progDialog">
         <h1>Simulação em andamento</h1>

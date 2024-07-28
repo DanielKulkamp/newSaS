@@ -90,6 +90,12 @@ if (isset($_POST['number'])){
             });
         });
     </script>
+    <style>
+        tr:nth-child(even) {
+            background-color: rgb(200, 200 , 200);
+        }
+    </style>
+
     <body>
         <table>
             <tr><th>#</th><th>homeTeam</th><th>homeScore</th><th>x</th><th>awayScore</th><th>awayTeam</th><th>date</th><th>done</th></tr>

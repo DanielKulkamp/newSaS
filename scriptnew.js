@@ -47,8 +47,8 @@ function enableEditGame(event){
   let td_away = document.getElementById(`awayScore_${index}`);
   let homeScore = td_home.innerHTML;
   let awayScore = td_away.innerHTML;
-  td_home.innerHTML = `<input type='number' min='0' id='inputHome_${index}' value='${homeScore}'>`
-  td_away.innerHTML = `<input type='number' min='0' id='inputAway_${index}' value='${awayScore}'>`
+  td_home.innerHTML = `<input type='number' min='0' maxlength='2' id='inputHome_${index}' value='${homeScore}'>`
+  td_away.innerHTML = `<input type='number' min='0' maxlength='2' id='inputAway_${index}' value='${awayScore}'>`
   button.removeEventListener('click', enableEditGame);
   button.addEventListener('click', saveEditedGame);
   button.innerHTML = "Salvar";
@@ -420,6 +420,7 @@ function messageFromWorker(event) {
         return newAcc;
       });
       displaySummary(consolidado, N_SIMS*N_RUNS);
+      displayBrierScore(consolidado, N_SIMS*N_RUNS);
       showPanel("#divSummary");
     }
   }
@@ -466,3 +467,72 @@ document.addEventListener('DOMContentLoaded', (event) => {
     displayListOfMatches(listOfMatches);
     runSimulation();
 });
+
+function helperBrier(index, teamStats, start, stop){
+  return ((index >= start && index < stop?1:0)-teamStats.histograma.slice(start,stop).reduce((a,b)=>a+b)/(N_RUNS*N_SIMS))**2;
+}
+
+function displayBrierScore(summary, n_sims){
+  for (let i =0; i<listOfMatches.length; i++){
+    if (!listOfMatches[i].done && listOfMatches[i].homeScore !="" && listOfMatches[i].awayScore != ""){
+      listOfMatches[i].done = 1;
+    }
+  }
+  let [ranking, realCampaign] = computePastMatches(listOfMatches);
+  ranking.sort((a,b) => a.compareTo(b));
+  let table = `<h2>Brier Score</h2>
+                    <table border='1'>
+                    <tr><th>#</th><th>Time</th>
+                    <th>Título</th>
+                    <th>G4</th>
+                    <th>G6</th>
+                    <th>G7-12</th>
+                    <th>G13-16</th>
+                    <th>Z4</th>
+                    <th>Σ1</th>
+                    <th>Σ2</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td> 
+                    </tr>`;
+  let brScore = 0;
+  let brScoreGrand = 0;
+  for (let index=0; index<ranking.length; index++) {
+    let team = ranking[index];
+    let teamStats = summary.filter(x => x.nome == team.name)[0];
+    console.log(teamStats);
+    let brTitle = helperBrier(index, teamStats, 0, 1); 
+    let brG4 = helperBrier(index, teamStats, 0, 4); 
+    let brG6 = helperBrier(index, teamStats, 0, 6);
+    let brG712 = helperBrier(index, teamStats, 6, 12);
+    let brG1316 = helperBrier(index, teamStats, 12, 16);
+    let brZ4 = helperBrier(index, teamStats, 16, 20);
+    let teamTotal = brTitle+brG4+brG6+brG712+brG1316+brZ4;
+    let teamGrandTotal = 0;
+    let details = "";
+    for (let [pos, count] of teamStats.histograma.entries()){
+      let posBrier = ((pos==index?1:0)-count/n_sims)**2;
+      teamGrandTotal += posBrier;
+      details = details+=`<td class="brier">${posBrier.toFixed(2)}</td>`;
+    }
+    
+    brScoreGrand += teamGrandTotal;
+    brScore += teamTotal;
+    table += `<tr><td>${index+1}</td><td><img height='40' width='40' src='${badgesDictionary[teamStats.nome]}' title='${teamStats.nome}'</img></td>
+    <td class="brier">${brTitle.toFixed(2)}</td>
+    <td class="brier">${brG4.toFixed(2)}</td>
+    <td class="brier">${brG6.toFixed(2)}</td>
+    <td class="brier">${brG712.toFixed(2)}</td>
+    <td class="brier">${brG1316.toFixed(2)}</td>
+    <td class="brier">${brZ4.toFixed(2)}</td>
+    <td class="brier">${teamTotal.toFixed(2)}</td>
+    <td class="brier">${teamGrandTotal.toFixed(2)}</td>${details}</tr>`;
+  }
+  table += `</table><h2>Total: ${brScore.toFixed(2)} Grand: ${brScoreGrand.toFixed(2)}</h2>`;
+
+  document.getElementById("hidden").innerHTML = table;
+  document.querySelectorAll(".brier").forEach(element => {
+    element.style.backgroundColor = "rgba(255,0,0,"+element.innerHTML+")";
+  });
+}
+
+function changeConfig(){  
+  
+}
