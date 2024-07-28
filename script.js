@@ -248,6 +248,11 @@ function showPanel(id){
   }
 }
 
+/**
+ * Updates the ratings and campaign panel 
+ * @param {*} ratings : an array of Team sorted by ratings
+ */
+
 function displayRatings(ratings){
   let rows = [];
   for (let i = 0; i < ratings.length; i++){
@@ -257,7 +262,7 @@ function displayRatings(ratings){
   }
   let table = "<h2>Ratings e Campanha</h2><table border='1'><tr><th>#</th><th>Time</th><th>Rating</th><th>PG</th><th>Vitórias</th><th>Saldo</th><th>Gols pró</th></tr>" + rows.join("") + "</table>";
   document.getElementById("divRatings").innerHTML = table;
-  showPanel("divRatings");
+  
 }
 
 function enableEditGame(event){
@@ -297,18 +302,24 @@ function saveEditedGame(event){
 }
 
 function displayListOfMatches(listOfMatches) {
-  let table = "<h2>Lista completa de jogos</h2><table border='1'><tr><th>#</th><th>Mandante</th><th></th><th>x</th><th></th><th>Visitante</th></tr>";
+  let table = "<h2>Lista completa de jogos</h2><table border='1'><tr><th>#</th><th>Rodada</th><th>Mandante</th><th></th><th>x</th><th></th><th>Visitante</th><th>Data</th></tr>";
+
   listOfMatches.forEach((game, i) => {
     let homeBadge = badgesDictionary[game.homeTeam];
     let awayBadge = badgesDictionary[game.awayTeam];
+    
+    let data = game.date?game.date.substring(8,10)+game.date.substring(4,8)+game.date.substring(0,4)+game.date.substring(10):"a definir";
     table += `<tr>
-        <td>${i}</td>
-        <td><img height='40' width='40' src='${homeBadge}' title='${game.homeTeam}'</img></td>
-        <td id="homeScore_${i}">${game.homeScore}</td>
-        <td>X</td>
-        <td id="awayScore_${i}">${game.awayScore}</td>
-        <td><img height='40' width='40' src='${awayBadge}' title='${game.awayTeam}'</img>
-        <td><button class="editMatchButton" id="editButton_${i}">Editar</button></td>
+          <td>${game.number}</td>
+          <td>${Math.ceil(game.number/10)}</td>
+          <td><img height='40' width='40' src='${homeBadge}' title='${game.homeTeam}'</img></td>
+          <td id="homeScore_${i}">${game.homeScore}</td>
+          <td>X</td>
+          <td id="awayScore_${i}">${game.awayScore}</td>
+          <td><img height='40' width='40' src='${awayBadge}' title='${game.awayTeam}'</img>
+          <td>${data}</td>
+          <td><button class="editMatchButton" id="editButton_${i}">Editar</button></td>
+
     </tr>`;
   });
   table += "</table>";
@@ -351,6 +362,11 @@ function displayNextMatches(homeTeams, awayTeams, expectancies){
 
 }
 
+/**
+ * 
+ * @param {[Object]} alistOfMatches : an array of matches 
+ * @returns [ranking, realCampaign] : um array com um array de times ordenado por rating e um dicionário dos nomesDostimes -> campanhas
+ */
 function computePastMatches(alistOfMatches) {
     const pastMatches = alistOfMatches.filter(match => match.done);
     
@@ -424,7 +440,6 @@ function displaySummary(summary){
     //table += ``;
     document.getElementById("divSummary").innerHTML = table;
     displayGraphs(summary);
-    showPanel("divSummary");
 }
 
 function displayGraphs(summary){
@@ -502,12 +517,12 @@ function displayGraphs(summary){
 const runSimulation = alistOfMatches => {
     let [ranking, realCampaign] = computePastMatches(alistOfMatches);
     displayRatings(ranking);
-
+    let tabelaProbs = [];
     const upcomingMatches = alistOfMatches.filter(match => !match.done);
     let [ mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
     displayNextMatches(mandantes, visitantes, expectancies);
-    let overall = new Array(N_RUNS)
-    for (let pass = 0; pass < N_RUNS) {
+    let overall = new Array(N_RUNS);
+    for (let pass = 0; pass < N_RUNS; pass++) {
         let stats = new Map();
         for (let t of Object.values(realCampaign)) {
           stats.set(t.name, new Summary(t.name));
@@ -556,28 +571,68 @@ const runSimulation = alistOfMatches => {
  
 
         }
-        let tabelaProbs = [];
+        tabelaProbs = [];
         for (let e of stats.values()) {
           tabelaProbs.push(e);
         }
         tabelaProbs.sort((a, b) => a.compareTo(b));
  
     }
+    console.log(overall);
     displaySummary(tabelaProbs);
     
 };
 
+const clickHandler = (clickEvent) => {
+  let mapinha = [...document.querySelectorAll(".menuItemButton")].map((x, i, arr) => [i, x]);
+  let buttonIndex = mapinha.filter((el, i, arr) => el[1].id == clickEvent.srcElement.id)[0][0];
+  let pannels = document.querySelectorAll(".slide");
+  console.log("Button Index: ", buttonIndex);
+  for (let i = 0; i< pannels.length; i++){
+    let cl = pannels[i].classList;
+    if (i < buttonIndex){
+      cl.remove("right");
+      cl.add("left");
+    }
+    if (i == buttonIndex){
+      cl.remove("left");
+      cl.remove("right");
+    }
+    if ( i> buttonIndex){
+      cl.remove("left");
+      cl.add("right");
+    }
+  }
+};
 
 document.addEventListener('DOMContentLoaded', (event) => {
-    
+    document.querySelector("#menuButton").addEventListener('click', (e) => {
+      let menuPanel = document.querySelector("#menuPanel");
+      if (menuPanel.classList.contains("left")) {
+        menuPanel.classList.remove("left");
+      } else {
+        menuPanel.classList.add("left");
+      }
+    });
+
+    document.querySelectorAll(".menuItemButton").forEach(x => (
+      x.addEventListener('click', clickHandler)
+    ));
+    listOfMatches.sort((a, b) => {
+      if (a.date == null) { 
+        if (b.date == null) return 0;
+        else return 1; // b > a
+      } 
+      if (b.date == null) {
+        return -1;
+      }
+      if (a.date > b.date) return 1;
+      if (a.date == b.date) return a.number - b.number;
+      return -1;
+    });
     displayListOfMatches(listOfMatches);
+
     
     runSimulation(listOfMatches);  
-    document.getElementById("btMatches").addEventListener('click', () => {showPanel('divMatches');});
-    document.getElementById("btRatings").addEventListener('click', () => {showPanel('divRatings');});
-    document.getElementById("btNextMatches").addEventListener('click', () => {showPanel('divNextMatches');});
-    document.getElementById("btSummary").addEventListener('click', () => {showPanel('divSummary');});
-    document.getElementById("btGraphs").addEventListener('click', () => {showPanel('divGraphs');});
-    document.getElementById("btNewSim").addEventListener('click', () => runSimulation(listOfMatches));
 
 });

@@ -16,5 +16,3 @@ $miner = new SiteCBFMiner( $url_base."a"."/".$ano, "serie-a-".$ano);
 $miner->atualizaJogos("db");
  
 
-?>
-

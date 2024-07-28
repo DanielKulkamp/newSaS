@@ -56,6 +56,6 @@ while ($ano >= 2020) {
     // $miner->cadastraEscudos("db");
     $ano--;
 }
-}
+
 ?>
 

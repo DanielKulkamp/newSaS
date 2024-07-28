@@ -94,7 +94,7 @@ class SiteCBFMultifase extends SiteCBFMiner
         $stmt = $db->prepare('INSERT INTO matches (tournament, number, homeTeam, awayTeam, homeScore, awayScore, date, done) VALUES (:tournament,:number, :homeTeam, :awayTeam, :homeScore, :awayScore, :date, :done)');
 
         foreach ($this->gameList as $game) {
-            echo ($game->homeTeam . ' ' . $game->homeScore . ' x ' . $game->awayScore . ' ' . $game->awayTeam . ' - ' . $game->date . "\n");
+            echo $game->homeTeam . ' ' . $game->homeScore . ' x ' . $game->awayScore . ' ' . $game->awayTeam . ' - ' . $game->date . "\n";
             $stmt->bindValue(':tournament', $game->tournament, PDO::PARAM_STR);
             $stmt->bindValue(':number', $game->id, PDO::PARAM_INT);
             $stmt->bindValue(':homeTeam', $game->homeTeam, PDO::PARAM_STR);
@@ -112,6 +112,7 @@ class SiteCBFMultifase extends SiteCBFMiner
         $db->exec('CREATE TABLE IF NOT EXISTS badgees (team TEXT PRIMARY KEY, url TEXT)');
         $stmt = $db->prepare('INSERT INTO badges (team, url) VALUES (:team, :url) ON CONFLICT(team) DO UPDATE SET url = :url');
         foreach (array_keys($this->badges) as $teamName) {
+            echo ''.$teamName.''.$this->badges[$teamName].'<br>\n';
             $stmt->bindValue(':team', $teamName, PDO::PARAM_STR);
             $stmt->bindValue(':url', $this->badges[$teamName], PDO::PARAM_STR);
             $stmt->execute();
@@ -138,13 +139,6 @@ class SiteCBFMiner
             ini_set('memory_limit', '256M');
 
             $doc = file_get_contents($this->url);
-
-            /*$ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $this->url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $doc = curl_exec($ch);
-            curl_close($ch);*/
-
             $doc = preg_replace('/\r*\n\r*/m', '', $doc);
             $reHomeTeams = '/time pull-left"[^"]*"time-sigla"[^"]*img src="([^\?]*)[^"]*"[^"]*"([^"]*)/m';
             $reAwayTeams = '/time pull-right"[^"]*"time-sigla"[^"]*img src="([^\?]*)[^"]*"[^"]*"([^"]*)/m';
@@ -167,7 +161,6 @@ class SiteCBFMiner
                 }
                 $game = new Game($badgesAndNamesHome[$i][2], $badgesAndNamesAway[$i][2], $homeScore, $awayScore, $datas[$i][1], $datas[$i][2], $this->tournament);
                 array_push($this->gameList, $game);
-                echo "Mined: ".$game->homeTeam." ".$game->homeScore."X".$game->awayScore." ".$game->awayTeam."<br>\n";
             }
         } catch (Exception $e) {
             echo 'Caught exception: ', $e->getMessage(), "\n";
@@ -226,6 +219,7 @@ class SiteCBFMiner
         $db->exec('CREATE TABLE IF NOT EXISTS badges (team TEXT PRIMARY KEY, url TEXT)');
         $stmt = $db->prepare('INSERT INTO badges (team, url) VALUES (:team, :url) ON CONFLICT(team) DO UPDATE SET url = :url');
         foreach (array_keys($this->badges) as $teamName) {
+            echo ''.$teamName.''.$this->badges[$teamName].'<br>\n';
             $stmt->bindValue(':team', $teamName, PDO::PARAM_STR);
             $stmt->bindValue(':url', $this->badges[$teamName], PDO::PARAM_STR);
             $stmt->execute();
