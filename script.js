@@ -303,13 +303,14 @@ function saveEditedGame(event){
 
 function displayListOfMatches(listOfMatches) {
   let table = "<h2>Lista completa de jogos</h2><table border='1'><tr><th>#</th><th>Rodada</th><th>Mandante</th><th></th><th>x</th><th></th><th>Visitante</th><th>Data</th></tr>";
-
+  let lastDoneMatch = listOfMatches.filter((a) => a.done).reduce((acc, curr) => curr );
+  let firstUndone = listOfMatches.filter(a => !a.done)[0];
   listOfMatches.forEach((game, i) => {
     let homeBadge = badgesDictionary[game.homeTeam];
     let awayBadge = badgesDictionary[game.awayTeam];
-    
+
     let data = game.date?game.date.substring(8,10)+game.date.substring(4,8)+game.date.substring(0,4)+game.date.substring(10):"a definir";
-    table += `<tr>
+    table += `<tr id="jogo${game.number}">
           <td>${game.number}</td>
           <td>${Math.ceil(game.number/10)}</td>
           <td><img height='40' width='40' src='${homeBadge}' title='${game.homeTeam}'</img></td>
@@ -320,11 +321,11 @@ function displayListOfMatches(listOfMatches) {
           <td>${data}</td>
           <td><button class="editMatchButton" id="editButton_${i}">Editar</button></td>
 
-    </tr>`;
+      </tr>`;
   });
   table += "</table>";
   document.getElementById("divMatches").innerHTML = table;
-  
+  document.getElementById(`jogo${firstUndone.number}`).scrollIntoView({ behavior: 'smooth' });
   for( button of  document.getElementsByClassName("editMatchButton") ) {
     button.addEventListener('click', enableEditGame);
 
@@ -568,8 +569,6 @@ const runSimulation = alistOfMatches => {
                 stats.get(classif[19 - j].name).z4s += 1;
             }
             overall[pass] = stats;
- 
-
         }
         tabelaProbs = [];
         for (let e of stats.values()) {
@@ -620,7 +619,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     ));
     listOfMatches.sort((a, b) => {
       if (a.date == null) { 
-        if (b.date == null) return 0;
+        if (b.date == null) return b.done - a.done;
         else return 1; // b > a
       } 
       if (b.date == null) {

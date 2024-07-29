@@ -14,7 +14,6 @@ $query = $pdo->prepare('SELECT date FROM matches WHERE tournament = :tournament 
 $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
 if ($query->execute()) {
     $firstPendingString = $query->fetch(PDO::FETCH_ASSOC)['date'];
-    echo 'first pending: ' . $firstPendingString . "\n";
     $firstPending = new DateTime($firstPendingString);
 } else {
     echo "error on getting first undone match\n";
@@ -23,17 +22,11 @@ if ($query->execute()) {
 // obter lista de jogos:
 $delta = DateInterval::createFromDateString('2 hour 30 minute');
 $firstPending->add($delta);
-echo "Now: ".$now->format("Y-m-d H:i")."<br>\n";
-echo "firstPending: ".$firstPending->format("Y-m-d H:i")."<br>\n";
-echo 'Now: ' . json_encode($now->format("Y-m-d H:i")) . "\n\n" . 'FirstPending: ' . json_encode($firstPending) . "\n\n";
 if ($now > $firstPending) {
-    echo "precisa atualizar!<br>\n";
     $url = 'https://www.cbf.com.br/futebol-brasileiro/competicoes/campeonato-brasileiro-' . substr($tournament, 0, 7) . '/' . substr($tournament, 8, 4);
-    echo "Url: ".$url . "<br>\n";
     $miner = new SiteCBFMiner($url, $tournament);
     [$gameList, $errors] = $miner->atualizaJogos($pdo);
     $miner->cadastraEscudos($pdo);
-    echo json_encode($miner);
 } else {
     $query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament');
     $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
@@ -43,7 +36,6 @@ if ($now > $firstPending) {
         echo "error\n";
     }
 }
-echo "<br>" . json_encode($gameList);
 // obter lista de escudos:
 $query = $pdo->prepare('SELECT DISTINCT matches.homeTeam, badges.url from MATCHES inner join(badges) on matches.homeTeam = badges.team where tournament = :tournament');
 $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
@@ -52,8 +44,6 @@ $badges = [];
 foreach ($query as $pair) {
     $badges[$pair['homeTeam']] = $pair['url'];
 }
-echo json_encode($gameList) . "\n";
-echo json_encode($badges) . "\n";
 
 ?>
 <html>
