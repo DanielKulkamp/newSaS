@@ -58,7 +58,7 @@ foreach ($query as $pair) {
         let listOfMatches = <?php echo json_encode($gameList) ?>; 
         let badgesDictionary = <?php echo json_encode($badges) ?>;
     </script>
-    <script src="script.js"></script>
+    <script src="scriptnew.js"></script>
    
     <style>
 body, html {
