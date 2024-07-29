@@ -22,7 +22,8 @@ if ($query->execute()) {
 // obter lista de jogos:
 $delta = DateInterval::createFromDateString('2 hour 30 minute');
 $firstPending->add($delta);
-if ($now > $firstPending) {
+if ($now > $firstPending || isset($_GET['forceUpdate'])) {  
+    echo 'updating '. $tournament .'';
     $url = 'https://www.cbf.com.br/futebol-brasileiro/competicoes/campeonato-brasileiro-' . substr($tournament, 0, 7) . '/' . substr($tournament, 8, 4);
     $miner = new SiteCBFMiner($url, $tournament);
     [$gameList, $errors] = $miner->atualizaJogos($pdo);
@@ -70,6 +71,9 @@ body, html {
 }
 
 .slide {
+  display: flex;
+  justify-content: space-around;
+  flex-direction: column;
   position: absolute;
   background-position: center;
   background-size: cover;
@@ -185,18 +189,18 @@ body, html {
         <button class="menuItemButton" id="btGraph">Gráficos</button>
         <div>-</div>
         <button id="ntNewSim">Nova simulação</button>
-      </div>
+      </div><div>
       <div class="slide bg1"><div id="divMatches" class="content">Blablabla</div></div>
       <div class="slide bg2 right"><div class="content" id="divNextMatches"></div></div>
       <div class="slide bg3 right"><div class="content" id="divRatings"></div></div>
       <div class="slide bg4 right"><div class="content" id="divSummary"></div></div>
       <div class="slide bg5 right"><div class="content" id="divGraphs">      <h3>Selecione 1 ou mais times e clique em "Gerar gráfico":</h3>
-        <select id="item-select" multiple></select><button id="plot-button">Gerar gráfico</button>
-        <h2>Probabilidade por colocação final:</h2>
+        <select id="item-select" multiple></select><button id="plot-button">Projeção de Posição</button><button id="plot-points">Projeção de Pontos</button>
+        <h2 id="graph-title"></h2>
         <canvas id="histogram-chart"></canvas></div>
       </div>
 
-
+      </div>
 
 
 

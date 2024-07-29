@@ -12,6 +12,7 @@ const PCT_EMPATE_2 = 0.99;
 const PCT_DERROTA_1 = 0.80;
 const PCT_DERROTA_2 = 0.99;
 const N_RUNS = 20;
+const RUNS = [];
 var chart;
 
 class Summary {
@@ -236,17 +237,7 @@ function simulateMatchELOHFA(casa, fora) {
   return [ homeScore, awayScore];  
 }
 
-function showPanel(id){
-  let panels = document.getElementsByClassName("panel");
-  for (let index = 0; index < panels.length; index++) {
-    const element = panels[index];
-    if (element.id == id){
-      element.style.display = "block";
-    } else {
-      element.style.display = "none";
-    }          
-  }
-}
+
 
 /**
  * Updates the ratings and campaign panel 
@@ -330,7 +321,6 @@ function displayListOfMatches(listOfMatches) {
     button.addEventListener('click', enableEditGame);
 
   }
-  showPanel("divMatches");
 }
 
 function displayNextMatches(homeTeams, awayTeams, expectancies){
@@ -358,13 +348,11 @@ function displayNextMatches(homeTeams, awayTeams, expectancies){
   </tr>${rows.join("")}</table>`;
   
   document.getElementById("divNextMatches").innerHTML = table;
-  showPanel("divNextMatches");
-  
 
 }
 
 /**
- * 
+ * Computes ratings and campaigns from a list of matches.
  * @param {[Object]} alistOfMatches : an array of matches 
  * @returns [ranking, realCampaign] : um array com um array de times ordenado por rating e um dicionário dos nomesDostimes -> campanhas
  */
@@ -392,6 +380,12 @@ function computePastMatches(alistOfMatches) {
     return [ranking, realCampaign];
 }
 
+/**
+ * Calculate the win/draw/loss expectancy of the next 10 upcoming matches.
+ * @param {*} upcomingMatches a list of upcoming matches
+ * @param {*} realCampaign a
+ * @returns 
+ */
 function calculateNextExpectancies(upcomingMatches, realCampaign){
     const mandantes = [];
     const visitantes = [];
@@ -414,7 +408,7 @@ function calculateNextExpectancies(upcomingMatches, realCampaign){
     return [ mandantes, visitantes, expectancies];
 }
 
-function displaySummary(summary){
+function displaySummary(summary, n_sims){
     let table = `<h2>Resumo da Simulação</h2>
                     <table border='1'>
                     <tr><th>#</th><th>Time</th>
@@ -429,12 +423,12 @@ function displaySummary(summary){
         
         table += `<tr><td>${i+1}</td>
                     <td><img height='40' width='40' src='${badgesDictionary[stats.nome]}' title='${stats.nome}'</img></td>
-                    <td>${(100*stats.titulos/N_SIMS).toFixed(2)}</td>
-                    <td>${(100*stats.g4s/N_SIMS).toFixed(2)}</td>
-                    <td>${(100*stats.histograma.slice(0,6).reduce((a,b) => a+b)/N_SIMS).toFixed(2)}</td>
-                    <td>${(100*stats.histograma.slice(6,12).reduce((a,b) => a+b)/N_SIMS).toFixed(2)}</td>
-                    <td>${(100*stats.histograma.slice(12,16).reduce((a,b) => a+b)/N_SIMS).toFixed(2)}</td>
-                    <td>${(100*stats.z4s/N_SIMS).toFixed(2)}</td>
+                    <td>${(100*stats.titulos/n_sims).toFixed(2)}</td>
+                    <td>${(100*stats.g4s/n_sims).toFixed(2)}</td>
+                    <td>${(100*stats.histograma.slice(0,6).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
+                    <td>${(100*stats.histograma.slice(6,12).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
+                    <td>${(100*stats.histograma.slice(12,16).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
+                    <td>${(100*stats.z4s/n_sims).toFixed(2)}</td>
                 </tr>`;
     });
     table += "</table>";
@@ -447,6 +441,7 @@ function displayGraphs(summary){
   // Get a reference to the select element and the button element
   var itemSelect = document.getElementById("item-select");
   var plotButton = document.getElementById("plot-button");
+  var plotPoints = document.getElementById("plot-points");
 
   // Populate the select element with the names of the items in the array
   itemSelect.innerHTML = "";
@@ -511,6 +506,61 @@ function displayGraphs(summary){
           options: chartOptions
       });
   });
+  plotPoints.addEventListener("click", function() {
+      // Find the selected items in the array
+      var selectedItems = [];
+      var selectedOptions = Array.from(itemSelect.selectedOptions);
+      for (var i = 0; i < selectedOptions.length; i++) {
+          var selectedItem = summary.find(function(item) {
+              return item.nome === selectedOptions[i].value;
+          });
+          if (selectedItem) {
+              selectedItems.push(selectedItem);
+          }
+      }
+
+      var colorPalette = [    "#a6cee3",    "#1f78b4",    "#b2df8a",    "#33a02c",    "#fb9a99",    "#e31a1c",    "#fdbf6f",    "#ff7f00",    "#cab2d6",    "#6a3d9a",    "#ffff99",    "#b15928",    "#8dd3c7",    "#ffffb3",    "#bebada",    "#fb8072",    "#80b1d3",    "#fdb462",    "#fccde5",    "#d9d9d9"];
+      // Update the chart data object
+      var chartData = {
+          labels: selectedItems[0].histPontos.map(function(_, index) {
+              return index;
+          }),
+          datasets: selectedItems.map(function(item, index) {
+              return {
+                  label: item.nome,
+                  backgroundColor: colorPalette[index % colorPalette.length],
+                  borderColor: colorPalette[index % colorPalette.length],
+                  borderWidth: 1,
+                  data: item.histPontos.map(a => 100.0*a/(N_SIMS*N_RUNS))
+              };
+          })
+      };
+
+      // Update the chart options object
+      var chartOptions = {
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      beginAtZero: true
+                  }
+              }]
+          }
+      };
+
+      // Destroy any existing chart objects
+      if (chart !== undefined) {
+          chart.destroy();
+      }
+
+      // Create the chart object
+      var histogramCanvas = document.getElementById("histogram-chart");
+      chart = new Chart(histogramCanvas, {
+          type: 'bar',
+          data: chartData,
+          options: chartOptions
+      });
+  });
+
 }
 
  
@@ -518,8 +568,8 @@ function displayGraphs(summary){
 const runSimulation = alistOfMatches => {
     let [ranking, realCampaign] = computePastMatches(alistOfMatches);
     displayRatings(ranking);
-    let tabelaProbs = [];
     const upcomingMatches = alistOfMatches.filter(match => !match.done);
+    let tabelaProbs = [];
     let [ mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
     displayNextMatches(mandantes, visitantes, expectancies);
     let overall = new Array(N_RUNS);
@@ -586,7 +636,7 @@ const clickHandler = (clickEvent) => {
   let mapinha = [...document.querySelectorAll(".menuItemButton")].map((x, i, arr) => [i, x]);
   let buttonIndex = mapinha.filter((el, i, arr) => el[1].id == clickEvent.srcElement.id)[0][0];
   let pannels = document.querySelectorAll(".slide");
-  console.log("Button Index: ", buttonIndex);
+  document.querySelector("#menuPanel").classList.add("left");
   for (let i = 0; i< pannels.length; i++){
     let cl = pannels[i].classList;
     if (i < buttonIndex){
@@ -603,6 +653,54 @@ const clickHandler = (clickEvent) => {
     }
   }
 };
+
+function showPanel(id) {
+  const element = document.querySelector(id).parentElement;
+  console.log(element);
+  element.classList.remove("left");
+  element.classList.remove("right");
+  let sibling = element.previousElementSibling;
+
+  while (sibling) {
+    sibling.classList.remove("right");
+    sibling.classList.add("left");
+    sibling = sibling.previousElementSibling;
+  }
+  sibling = element.nextElementSibling;
+  while (sibling) {
+    sibling.classList.add("right");
+    sibling.classList.remove("left");
+    sibling = sibling.nextElementSibling;
+  }
+}
+
+function messageFromWorker(event) {
+  let data = event.data;
+  if (data[0] == 'done') {
+    RUNS.push(data[1]);
+    if (RUNS.length == N_RUNS) {
+      let consolidado = RUNS.reduce ((acc, curr, index, arr) => {
+        let newAcc = [];
+        for (item of curr){
+          let itemInAcc = acc.filter(x => x.nome == item.nome)[0];
+          item.titulos += itemInAcc.titulos;
+          item.z4s += itemInAcc.z4s;
+          for (val in item.histograma) {
+            item.histograma[val] += itemInAcc.histograma[val];
+          }
+          for (pts in item.histPontos) {
+            item.histPontos[pts] += itemInAcc.histPontos[pts];
+          }
+          newAcc.push(item);
+        }
+        return newAcc;
+      });
+      displaySummary(consolidado, N_SIMS*N_RUNS);
+      showPanel("#divSummary");
+    }
+  }
+
+}
 
 document.addEventListener('DOMContentLoaded', (event) => {
     document.querySelector("#menuButton").addEventListener('click', (e) => {
@@ -630,8 +728,17 @@ document.addEventListener('DOMContentLoaded', (event) => {
       return -1;
     });
     displayListOfMatches(listOfMatches);
-
-    
-    runSimulation(listOfMatches);  
+    let [ranking, realCampaign] = computePastMatches(listOfMatches);
+    const upcomingMatches = listOfMatches.filter(match => !match.done);
+    displayRatings(ranking);
+    let [ mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
+    displayNextMatches(mandantes, visitantes, expectancies);
+    for (let i = 0; i < N_RUNS; i++){
+      let worker = new Worker("worker.js");
+      worker.onmessage = messageFromWorker;
+      worker.postMessage(['run', upcomingMatches, realCampaign, N_SIMS]);
+    }
+        
+    //runSimulation(listOfMatches);  
 
 });

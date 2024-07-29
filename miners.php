@@ -26,7 +26,9 @@ class Game
         if ($date == 'A definir') {
             $this->date = null;
         } else {
+
             $this->date = substr($date, 6, 4) . '-' . substr($date, 3, 2) . '-' . substr($date, 0, 2) . substr($date, 10);  // 01/34/6789
+
         }
     }
 }
@@ -94,7 +96,7 @@ class SiteCBFMultifase extends SiteCBFMiner
         $stmt = $db->prepare('INSERT INTO matches (tournament, number, homeTeam, awayTeam, homeScore, awayScore, date, done) VALUES (:tournament,:number, :homeTeam, :awayTeam, :homeScore, :awayScore, :date, :done)');
 
         foreach ($this->gameList as $game) {
-            echo $game->homeTeam . ' ' . $game->homeScore . ' x ' . $game->awayScore . ' ' . $game->awayTeam . ' - ' . $game->date . "\n";
+            //echo $game->homeTeam . ' ' . $game->homeScore . ' x ' . $game->awayScore . ' ' . $game->awayTeam . ' - ' . $game->date . "\n";
             $stmt->bindValue(':tournament', $game->tournament, PDO::PARAM_STR);
             $stmt->bindValue(':number', $game->id, PDO::PARAM_INT);
             $stmt->bindValue(':homeTeam', $game->homeTeam, PDO::PARAM_STR);
@@ -112,7 +114,7 @@ class SiteCBFMultifase extends SiteCBFMiner
         $db->exec('CREATE TABLE IF NOT EXISTS badgees (team TEXT PRIMARY KEY, url TEXT)');
         $stmt = $db->prepare('INSERT INTO badges (team, url) VALUES (:team, :url) ON CONFLICT(team) DO UPDATE SET url = :url');
         foreach (array_keys($this->badges) as $teamName) {
-            echo ''.$teamName.''.$this->badges[$teamName].'<br>\n';
+            //echo ''.$teamName.''.$this->badges[$teamName].'<br>\n';
             $stmt->bindValue(':team', $teamName, PDO::PARAM_STR);
             $stmt->bindValue(':url', $this->badges[$teamName], PDO::PARAM_STR);
             $stmt->execute();
@@ -142,13 +144,12 @@ class SiteCBFMiner
             $doc = preg_replace('/\r*\n\r*/m', '', $doc);
             $reHomeTeams = '/time pull-left"[^"]*"time-sigla"[^"]*img src="([^\?]*)[^"]*"[^"]*"([^"]*)/m';
             $reAwayTeams = '/time pull-right"[^"]*"time-sigla"[^"]*img src="([^\?]*)[^"]*"[^"]*"([^"]*)/m';
-            $reDatas = '/(A definir|\d\d\/\d\d\/\d\d\d\d\s*\d\d:\d\d)[^J]*Jogo: \s*(\d+)/m';  
+            $reDatas = '/(A definir|\d\d\/\d\d\/\d\d\d\d\s*\d\d:\d\d)[\s\-]*Jogo: \s*(\d+)/m';  
             $reHorarioPlacar = '/strong class="partida-horario center-block">(.*?)<\/strong>/m';
             $contagemHome = preg_match_all($reHomeTeams, $doc, $badgesAndNamesHome, PREG_SET_ORDER, 0);
             $contagemAway = preg_match_all($reAwayTeams, $doc, $badgesAndNamesAway, PREG_SET_ORDER, 0);
             $contagemPlacar = preg_match_all($reHorarioPlacar, $doc, $placarHorario, PREG_SET_ORDER, 0);
             $contagemDatas = preg_match_all($reDatas, $doc, $datas, PREG_SET_ORDER, 0);
-            echo "Contagem Placar: ".$contagemPlacar;
             for ($i = 0; $i < $contagemPlacar; ++$i) {
                 $re = '/(\d+)\s*x\s*(\d+)/m';
                 $homeScore = '';
@@ -219,7 +220,7 @@ class SiteCBFMiner
         $db->exec('CREATE TABLE IF NOT EXISTS badges (team TEXT PRIMARY KEY, url TEXT)');
         $stmt = $db->prepare('INSERT INTO badges (team, url) VALUES (:team, :url) ON CONFLICT(team) DO UPDATE SET url = :url');
         foreach (array_keys($this->badges) as $teamName) {
-            echo ''.$teamName.''.$this->badges[$teamName].'<br>\n';
+            //echo ''.$teamName.''.$this->badges[$teamName].'<br>\n';
             $stmt->bindValue(':team', $teamName, PDO::PARAM_STR);
             $stmt->bindValue(':url', $this->badges[$teamName], PDO::PARAM_STR);
             $stmt->execute();
@@ -246,7 +247,7 @@ class SiteCBFMiner
         $stmt = $db->prepare('INSERT INTO matches (tournament, number, homeTeam, awayTeam, homeScore, awayScore, date, done) VALUES (:tournament,:number, :homeTeam, :awayTeam, :homeScore, :awayScore, :date, :done)');
 
         foreach ($this->gameList as $game) {
-            echo ($game->homeTeam . ' ' . $game->homeScore . ' x ' . $game->awayScore . ' ' . $game->awayTeam . ' - ' . $game->date . "\n");
+            //echo ($game->homeTeam . ' ' . $game->homeScore . ' x ' . $game->awayScore . ' ' . $game->awayTeam . ' - ' . $game->date . "\n");
             $stmt->bindValue(':tournament', $game->tournament, PDO::PARAM_STR);
             $stmt->bindValue(':number', $game->id, PDO::PARAM_INT);
             $stmt->bindValue(':homeTeam', $game->homeTeam, PDO::PARAM_STR);
