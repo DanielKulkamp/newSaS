@@ -1,7 +1,7 @@
 <?php
 require_once 'miners.php';
 date_default_timezone_set('America/Sao_Paulo');
-$now = new DateTime('now',);
+$now = new DateTime('now');
 if (isset($_GET['tournament'])) {
     $tournament = $_GET['tournament'];
 } else {
@@ -144,6 +144,9 @@ body, html {
 .content table {
   text-align: center;
   align-content: center;
+}
+.content canvas {
+  background-color: rgba(239, 239, 239, 0.60);)
 }
 
 .content * {
