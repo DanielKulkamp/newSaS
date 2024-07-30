@@ -42,7 +42,7 @@ if ($now > $firstPending || isset($_GET['forceUpdate'])) {
 $query = $pdo->prepare('SELECT DISTINCT matches.homeTeam, badges.url from MATCHES inner join(badges) on matches.homeTeam = badges.team where tournament = :tournament');
 $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
 $query->execute();
-$badges = [];
+$badges = array();
 foreach ($query as $pair) {
     $badges[$pair['homeTeam']] = $pair['url'];
 }
