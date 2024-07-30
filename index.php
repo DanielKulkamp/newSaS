@@ -13,7 +13,8 @@ $pdo = new PDO('sqlite:db');
 $query = $pdo->prepare('SELECT date FROM matches WHERE tournament = :tournament AND done = "0" and DATE != "" ORDER BY date ASC LIMIT 1');
 $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
 if ($query->execute()) {
-    $firstPendingString = $query->fetch(PDO::FETCH_ASSOC)['date'];
+    $result = $query->fetch(PDO::FETCH_ASSOC);
+    $firstPendingString = $result['date'];
     $firstPending = new DateTime($firstPendingString);
 } else {
     echo "error on getting first undone match\n";
