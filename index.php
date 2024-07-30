@@ -27,7 +27,7 @@ if ($now > $firstPending || isset($_GET['forceUpdate'])) {
     echo 'updating '. $tournament .'';
     $url = 'https://www.cbf.com.br/futebol-brasileiro/competicoes/campeonato-brasileiro-' . substr($tournament, 0, 7) . '/' . substr($tournament, 8, 4);
     $miner = new SiteCBFMiner($url, $tournament);
-    [$gameList, $errors] = $miner->atualizaJogos($pdo);
+    list($gameList, $errors) = $miner->atualizaJogos($pdo);
     $miner->cadastraEscudos($pdo);
 } else {
     $query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament');
