@@ -79,7 +79,7 @@ class SiteCBFMultifase extends SiteCBFMiner
     /***
      * @param $db a PDO
      */
-    public function cadastraJogos($db) : void
+    public function cadastraJogos($db) 
     {
         $db->exec('CREATE TABLE IF NOT EXISTS matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,7 +109,7 @@ class SiteCBFMultifase extends SiteCBFMiner
         }
     }
 
-    public function cadastraEscudos($db): void
+    public function cadastraEscudos($db)
     {
         $db->exec('CREATE TABLE IF NOT EXISTS badgees (team TEXT PRIMARY KEY, url TEXT)');
         $stmt = $db->prepare('INSERT INTO badges (team, url) VALUES (:team, :url) ON CONFLICT(team) DO UPDATE SET url = :url');
@@ -168,17 +168,17 @@ class SiteCBFMiner
         }
     }
 
-    public function getBadges(): array
+    public function getBadges()
     {
         return ($this->badges);
     }
 
-    public function getGameList(): array
+    public function getGameList()
     {
         return ($this->gameList);
     }
 
-    public function atualizaJogos($db): array
+    public function atualizaJogos($db)
     {
         $error = "";
         try {
@@ -208,14 +208,16 @@ class SiteCBFMiner
         } catch (Exception $e) {
             $error = $e->getMessage();
         }
-
-        return [$this->gameList, $error];
+        $arr = array();
+        $arr[0] = $this->gameList;
+        $arr[1] = $error;
+        return $arr;
     }
 
     /***
      * @param $db a PDO object
      */
-    public function cadastraEscudos($db): void
+    public function cadastraEscudos($db)
     {
         $db->exec('CREATE TABLE IF NOT EXISTS badges (team TEXT PRIMARY KEY, url TEXT)');
         $stmt = $db->prepare('INSERT INTO badges (team, url) VALUES (:team, :url) ON CONFLICT(team) DO UPDATE SET url = :url');
@@ -230,7 +232,7 @@ class SiteCBFMiner
     /***
      * @param $db a PDO object
      */
-    public function cadastraJogos($db) : void
+    public function cadastraJogos($db) 
     {
         $db->exec('CREATE TABLE IF NOT EXISTS matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -260,22 +262,22 @@ class SiteCBFMiner
         }
     }
 
-    public function calcKey() : void
-    {
-        $keyBuilder = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        foreach ($this->gameList as $game) {
-            $number = $game->id - 1;
-            $group = floor($number / 32);
-            if ($game->done) {
-                $keyBuilder[$group] += 2 ** $number;
-            }
-        }
-        $out = '';
-        foreach ($keyBuilder as $key => $val) {
-            $out = $val . $out;
-        }
-        $this->key = $out;
-    }
+//    public function calcKey() 
+//    {
+//        $keyBuilder = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+//        foreach ($this->gameList as $game) {
+//            $number = $game->id - 1;
+//            $group = floor($number / 32);
+//            if ($game->done) {
+//                $keyBuilder[$group] += 2 ** $number;
+//            }
+//        }
+//        $out = '';
+//        foreach ($keyBuilder as $key => $val) {
+//            $out = $val . $out;
+//        }
+//        $this->key = $out;
+//    }
 }
 
 ?>

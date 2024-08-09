@@ -4,7 +4,7 @@ require_once 'miners.php';
 $ano = 2024;
 $url_base = 'https://www.cbf.com.br/futebol-brasileiro/competicoes/campeonato-brasileiro-serie-';
 try {
-    $db = new PDO('sqlite:matches.db2');
+    $db = new PDO('sqlite:db');
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $res = $db->exec('CREATE TABLE IF NOT EXISTS matches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

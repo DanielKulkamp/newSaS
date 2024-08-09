@@ -11,7 +11,7 @@ const PCT_EMPATE_1 = 0.89;
 const PCT_EMPATE_2 = 0.99;
 const PCT_DERROTA_1 = 0.80;
 const PCT_DERROTA_2 = 0.99;
-const N_RUNS = 20;
+const N_RUNS = 40;
 const RUNS = [];
 var chart;
 
@@ -22,6 +22,7 @@ class Summary {
     this.g4s = 0;
     this.z4s = 0;
     this.histograma = new Array(20).fill(0);
+    this.histPontos = new Array(38*3+1).fill(0);
   }
   compareTo(other) {
     if (this.titulos > other.titulos) return -1;
@@ -409,6 +410,7 @@ function calculateNextExpectancies(upcomingMatches, realCampaign){
 }
 
 function displaySummary(summary, n_sims){
+    console.log(summary, n_sims);
     let table = `<h2>Resumo da Simulação</h2>
                     <table border='1'>
                     <tr><th>#</th><th>Time</th>
@@ -423,16 +425,15 @@ function displaySummary(summary, n_sims){
         
         table += `<tr><td>${i+1}</td>
                     <td><img height='40' width='40' src='${badgesDictionary[stats.nome]}' title='${stats.nome}'</img></td>
-                    <td>${(100*stats.titulos/n_sims).toFixed(2)}</td>
-                    <td>${(100*stats.g4s/n_sims).toFixed(2)}</td>
+                    <td>${(100*stats.histograma[0]/n_sims).toFixed(2)}</td>
+                    <td>${(100*stats.histograma.slice(0,4).reduce((a,b)=> a+b)/n_sims).toFixed(2)}</td>
                     <td>${(100*stats.histograma.slice(0,6).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
                     <td>${(100*stats.histograma.slice(6,12).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
                     <td>${(100*stats.histograma.slice(12,16).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
-                    <td>${(100*stats.z4s/n_sims).toFixed(2)}</td>
+                    <td>${(100*stats.histograma.slice(16,20).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
                 </tr>`;
     });
     table += "</table>";
-    //table += ``;
     document.getElementById("divSummary").innerHTML = table;
     displayGraphs(summary);
 }
@@ -469,7 +470,7 @@ function displayGraphs(summary){
       // Update the chart data object
       var chartData = {
           labels: selectedItems[0].histograma.map(function(_, index) {
-              return index + 1;
+              return ""+(index + 1)+"º";
           }),
           datasets: selectedItems.map(function(item, index) {
               return {
@@ -477,20 +478,41 @@ function displayGraphs(summary){
                   backgroundColor: colorPalette[index % colorPalette.length],
                   borderColor: colorPalette[index % colorPalette.length],
                   borderWidth: 1,
-                  data: item.histograma.map(a => 100.0*a/N_SIMS)
+                  data: item.histograma.map(a => 100.0*a/(N_SIMS*N_RUNS))
               };
           })
       };
 
+
+
+
       // Update the chart options object
       var chartOptions = {
-          scales: {
-              yAxes: [{
-                  ticks: {
-                      beginAtZero: true
-                  }
-              }]
+        plugins: {
+          title: {
+              display: true,
+              text: 'Projeção de posição final'
           }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Posição'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Probabilidade (%)'
+            }
+          },
+          yAxes: [{
+            ticks: {
+              beginAtZero: true
+            }
+          }]
+        }
       };
 
       // Destroy any existing chart objects
@@ -538,13 +560,31 @@ function displayGraphs(summary){
 
       // Update the chart options object
       var chartOptions = {
-          scales: {
-              yAxes: [{
-                  ticks: {
-                      beginAtZero: true
-                  }
-              }]
+        plugins: {
+          title: {
+              display: true,
+              text: 'Projeção de Pontuação Final'
           }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Pontos'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Probabilidade (%)'
+            }
+          }, 
+          yAxes: [{
+            ticks: {
+              beginAtZero: true
+            }
+          }]
+        }
       };
 
       // Destroy any existing chart objects
@@ -564,73 +604,6 @@ function displayGraphs(summary){
 }
 
  
-//Main Function of simulation
-const runSimulation = alistOfMatches => {
-    let [ranking, realCampaign] = computePastMatches(alistOfMatches);
-    displayRatings(ranking);
-    const upcomingMatches = alistOfMatches.filter(match => !match.done);
-    let tabelaProbs = [];
-    let [ mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
-    displayNextMatches(mandantes, visitantes, expectancies);
-    let overall = new Array(N_RUNS);
-    for (let pass = 0; pass < N_RUNS; pass++) {
-        let stats = new Map();
-        for (let t of Object.values(realCampaign)) {
-          stats.set(t.name, new Summary(t.name));
-        }
-        for (let i = 0; i < N_SIMS; i++) {
-            let dicTimes = new Map();
-            realCampaign.forEach((team, name) => {
-              dicTimes.set(name, {...team}); 
-            });
-
-            for (let j of upcomingMatches) {
-                if (!dicTimes.has(j.homeTeam)) {
-                    dicTimes.set(j.homeTeam, new Team(j.homeTeam, j.homeBadge));
-                }
-                if (!stats.has(j.homeTeam)) {
-                    stats.set(j.homeTeam, new Summary(j.homeTeam));
-                }
-                if (!dicTimes.has(j.awayTeam)) {
-                    dicTimes.set(j.awayTeam, new Team(j.awayTeam, j.awayBadge));
-                }
-                if (!stats.has(j.awayTeam)) {
-                    stats.set(j.awayTeam, new Summary(j.awayTeam));
-                }
-                let [homeScore, awayScore] = simulateMatchELOHFA(dicTimes.get(j.homeTeam), dicTimes.get(j.awayTeam));
-                computeMatch(dicTimes.get(j.homeTeam),dicTimes.get(j.awayTeam), homeScore, awayScore);
-
-            }
-
-            let classif = [];
-            dicTimes.forEach((team, name) => {
-              let teamInDic = {...team};
-              classif.push(teamInDic)
-            });
-            classif.sort((a, b) => compareTeams(a, b));
-            
-            
-            for (let pos = 0; pos < classif.length; pos++) {
-                stats.get(classif[pos].name).histograma[pos] = stats.get(classif[pos].name).histograma[pos]+1;
-            }
-            stats.get(classif[0].name).titulos += 1;
-            for (let j = 0; j < 4; j++) {
-                stats.get(classif[j].name).g4s += 1;
-                stats.get(classif[19 - j].name).z4s += 1;
-            }
-            overall[pass] = stats;
-        }
-        tabelaProbs = [];
-        for (let e of stats.values()) {
-          tabelaProbs.push(e);
-        }
-        tabelaProbs.sort((a, b) => a.compareTo(b));
- 
-    }
-    console.log(overall);
-    displaySummary(tabelaProbs);
-    
-};
 
 const clickHandler = (clickEvent) => {
   let mapinha = [...document.querySelectorAll(".menuItemButton")].map((x, i, arr) => [i, x]);
@@ -699,6 +672,9 @@ function messageFromWorker(event) {
       showPanel("#divSummary");
     }
   }
+  if (data[0]== 'progress') {
+    console.log("progress from worker: ", event);
+  }
 
 }
 
@@ -739,6 +715,5 @@ document.addEventListener('DOMContentLoaded', (event) => {
       worker.postMessage(['run', upcomingMatches, realCampaign, N_SIMS]);
     }
         
-    //runSimulation(listOfMatches);  
 
 });

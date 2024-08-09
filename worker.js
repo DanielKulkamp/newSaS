@@ -20,7 +20,7 @@ class Summary {
     this.g4s = 0;
     this.z4s = 0;
     this.histograma = new Array(20).fill(0);
-    this.histPontos = [];
+    this.histPontos = new Array(38*3+1).fill(0);
   }
   compareTo(other) {
     if (this.titulos > other.titulos) return -1;
@@ -245,6 +245,9 @@ function runSimulation(upcomingMatches, realCampaign, N_SIMS, method) {
     }
 
     for (let i = 0; i < N_SIMS; i++) {
+      if(i % (N_SIMS/20) == 0) {
+        postMessage(['progress', 100*i/N_SIMS]);
+      }
         let dicTimes = new Map();
         realCampaign.forEach((team, name) => {
             dicTimes.set(name, { ...team });
