@@ -31,7 +31,7 @@ try {
       //$miner = new SiteCBFMiner($url, $tournament);
       //list($gameList, $errors) = $miner->atualizaJogos($pdo);
       //$miner->cadastraEscudos($pdo);
-  /} 
+  //} 
   $query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament');
   $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
   if ($query->execute()) {
