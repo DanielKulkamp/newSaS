@@ -1,44 +1,24 @@
 <?php
-require_once 'miners.php';
 
-$ano = 2024;
-$url_base = 'https://www.cbf.com.br/futebol-brasileiro/competicoes/campeonato-brasileiro-serie-';
-try {
-    $db = new PDO('sqlite:db');
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $res = $db->exec('CREATE TABLE IF NOT EXISTS matches (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tournament TEXT,
-    number INTEGER,
-    homeTeam TEXT,
-    awayTeam TEXT,
-    homeScore TEXT,
-    awayScore TEXT,
-    date TEXT,
-    done BOOLEAN)');   
-    echo "Res: ". $res;
-    while ($ano >= 2024) {
-        $miner = new SiteCBFMiner($url_base . 'a' . '/' . $ano, 'serie-a-' . $ano);
-        $miner->cadastraJogos($db);
-        echo json_encode($miner->getGameList());
-        $miner->cadastraEscudos($db);
-        $miner = new SiteCBFMiner($url_base . 'b' . '/' . $ano, 'serie-b-' . $ano);
-        $miner->cadastraJogos($db);
-        $miner->cadastraEscudos($db);
-        //$miner = new SiteCBFMultifase($url_base . 'c' . '/' . $ano, 'serie-c-' . $ano);
-        //$miner->cadastraJogos($db);
-        //$miner->cadastraEscudos($db);
-        //$miner = new SiteCBFMultifase($url_base . 'd' . '/' . $ano, 'serie-d-' . $ano);
-        //$miner->cadastraJogos($db);
-        //$miner->cadastraEscudos($db);
-        // $miner = new SiteCBFMultifase( "https://www.cbf.com.br/futebol-brasileiro/competicoes/copa-brasil-masculino"."/".$ano, "copa-do-brasil-".$ano);
-        // $miner->cadastraEscudos("db");
-        $ano--;
-    }
+function get_sofascore_round($unique_tournament, $season, $round){
+    $url = "https://api.sofascore.com/api/v1/unique-tournament/{$unique_tournament}/season/{$season}/events/round/{$round}";
+
+    echo $url;
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    echo $response;
+    return $response;
 }
- catch (PDOException $e) {
-    echo $e->getMessage()."<br>\n";
-}
-    
 
 
+$ut = $_GET['ut']??325;
+$season = $_GET['season']??72034;
+$round = $_GET['round']??3;
+
+$res = get_sofascore_round($ut, $season, $round);
+echo $res;
+?>
