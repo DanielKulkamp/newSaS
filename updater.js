@@ -1,0 +1,43 @@
+async function fetch_rounds(tournament, season, n_rounds) {
+
+  let rounds = Array.from({ length: n_rounds }, (_, i) => i + 1)
+    .map(x => `https://api.sofascore.com/api/v1/unique-tournament/${tournament}/season/${season}/events/round/${x}`)
+  let proms = rounds.map(url => fetch(url).then(response => response.json()))
+  let values = await Promise.all(proms)
+  const events = values.map(x => x.events)
+    .map(x => {
+      if (new Set(x.map(e => e.homeTeam.id)).length === x.length) {
+        return x
+      } else {
+        return x.filter(e => e.status.code !== 60)
+      }
+    })
+    .reduce((acc, curr) => acc.concat(curr))
+    .map(x => {
+      return {
+        'id': x.id,
+        'tournament_id': x.tournament.uniqueTournament.id,
+        'season_id': x.season.id,
+        'round': x.roundInfo.round,
+        'status_code': x.status.code,
+        'home_team_id': x.homeTeam.id,
+        'home_team_name': x.homeTeam.name,
+        'home_score': x.homeScore.current,
+        'away_team_id': x.awayTeam.id,
+        'away_team_name': x.awayTeam.name,
+        'away_score': x.awayScore.current,
+        'timestamp': x.startTimestamp
+      }
+    })
+  events.map(
+    x => { return `${x.home_team_name} ${x.home_score} x ${x.away_score} ${x.away_team_name} ${x.round} ${x.id}` })
+    .forEach((x, idx) => console.log(idx, x))
+
+  return events
+
+}
+
+//fetch_rounds(325,72034,38)
+fetch_rounds(325, 58766, 38)
+//fetch_rounds(17,61627,38)
+
