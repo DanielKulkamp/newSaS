@@ -1,6 +1,6 @@
 <?php
 session_start();
-if ( !isset( $_SESSION['logged'])) {
+if (!isset($_SESSION['logged'])) {
     header('Location: login.php');
 }
 
@@ -16,16 +16,15 @@ if (isset($_GET['tournament'])) {
 
 $pdo = new PDO('sqlite:db');
 
-if (isset($_POST['number'])){
+if (isset($_POST['number'])) {
     $query = $pdo->prepare('UPDATE matches SET homeScore = :homeScore, awayScore = :awayScore, date = :date, done = :done where id = :id');
     $query->bindValue(':id', $_POST['number'], PDO::PARAM_INT);
     $query->bindValue(':homeScore', $_POST['homeScore'], PDO::PARAM_INT);
-    $query->bindValue(':awayScore', $_POST[ 'awayScore'], PDO::PARAM_INT);
+    $query->bindValue(':awayScore', $_POST['awayScore'], PDO::PARAM_INT);
     $query->bindValue(':date', $_POST['date'], PDO::PARAM_STR);
     $query->bindValue(':done', $_POST['done'], PDO::PARAM_INT);
     $query->execute();
     echo "ok!";
-    
 } else {
     $query = $pdo->prepare('SELECT * FROM matches WHERE tournament = :tournament order by done desc, date != "" desc, date asc');
     $query->bindValue(':tournament', $tournament, PDO::PARAM_STR);
@@ -36,7 +35,7 @@ if (isset($_POST['number'])){
     }
 
 ?>
-<html>
+    <html>
     <script>
         function handler(event) {
             let row = event.srcElement.parentElement.parentElement;
@@ -57,47 +56,56 @@ if (isset($_POST['number'])){
             let buttons = document.querySelectorAll(".edit");
             buttons.forEach(element => {
                 element.addEventListener('click', handler);
-                
+
             });
             let form = document.querySelector("form");
             form.addEventListener("submit", (event) => {
                 event.preventDefault();
-                document.querySelector("#done").value = 
-                    (document.querySelector("#homeScore") == "" || document.querySelector("#awayScore").value == "")?0:1;
+                document.querySelector("#done").value =
+                    (document.querySelector("#homeScore") == "" || document.querySelector("#awayScore").value == "") ? 0 : 1;
                 const formData = new FormData(form);
                 fetch('orc.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.text())
-                .then(data => {
-                    console.log(data);
-                    let rows = document.querySelectorAll('tr');
-                    for(row of rows) {
-                        if(row.children[0].innerHTML == document.querySelector('#numberSpan').innerHTML){
-                            row.children[2].innerHTML = document.querySelector("#homeScore").value ;
-                            row.children[4].innerHTML = document.querySelector("#awayScore").value ;
-                            row.children[6].innerHTML = document.querySelector("#date").value;
-                            row.children[7].innerHTML = document.querySelector("#done").value;
-                            document.querySelector("#editDialog").close();
-                            break;
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.text())
+                    .then(data => {
+                        console.log(data);
+                        let rows = document.querySelectorAll('tr');
+                        for (row of rows) {
+                            if (row.children[0].innerHTML == document.querySelector('#numberSpan').innerHTML) {
+                                row.children[2].innerHTML = document.querySelector("#homeScore").value;
+                                row.children[4].innerHTML = document.querySelector("#awayScore").value;
+                                row.children[6].innerHTML = document.querySelector("#date").value;
+                                row.children[7].innerHTML = document.querySelector("#done").value;
+                                document.querySelector("#editDialog").close();
+                                break;
+                            }
                         }
-                    }
 
-                })
-                .catch(error => console.log(error));
+                    })
+                    .catch(error => console.log(error));
 
             });
         });
     </script>
+
     <body>
         <table>
-            <tr><th>#</th><th>homeTeam</th><th>homeScore</th><th>x</th><th>awayScore</th><th>awayTeam</th><th>date</th><th>done</th></tr>
+            <tr>
+                <th>#</th>
+                <th>homeTeam</th>
+                <th>homeScore</th>
+                <th>x</th>
+                <th>awayScore</th>
+                <th>awayTeam</th>
+                <th>date</th>
+                <th>done</th>
+            </tr>
             <?php
             foreach ($gameList as $game) {
-                echo "<tr><td >". $game->id . "</td><td>". $game->homeTeam . "</td><td>" . $game->homeScore . "</td><td>x</td><td>" . $game->awayScore . 
-                "</td><td>" . $game->awayTeam . "</td><td>" . $game->date . "</td><td>" . $game->done . "</td><td><button class='edit'>edit</button></td></tr>";
-                
+                echo "<tr><td >" . $game->id . "</td><td>" . $game->homeTeam . "</td><td>" . $game->homeScore . "</td><td>x</td><td>" . $game->awayScore .
+                    "</td><td>" . $game->awayTeam . "</td><td>" . $game->date . "</td><td>" . $game->done . "</td><td><button class='edit'>edit</button></td></tr>";
             }
 
             ?>
@@ -112,11 +120,12 @@ if (isset($_POST['number'])){
                     <input type="text" name="date" id="date">
                     <input type="hidden" name="done" id="done">
                     <input type="submit">
-                </i>
+                    </i>
             </dialog>
         </table>
     </body>
+
     </html>
-<?php 
+<?php
 }
 ?>
