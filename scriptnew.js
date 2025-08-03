@@ -1,243 +1,9 @@
-const DIVISOR_ELO = 400.0;
-const IMPORTANCE = 30.0;
-const N_SIMS = 5_000;
-const HFA = 40;
-const PCT_VITORIA_SALDO_5 = 0.01;
-const PCT_VITORIA_SALDO_4 = 0.06;
-const PCT_VITORIA_SALDO_3 = 0.17;
-const PCT_VITORIA_SALDO_2 = 0.45;
-const PCT_EMPATE_0 = 0.35;
-const PCT_EMPATE_1 = 0.89;
-const PCT_EMPATE_2 = 0.99;
-const PCT_DERROTA_1 = 0.80;
-const PCT_DERROTA_2 = 0.99;
-const N_RUNS = 40;
-const RUNS = [];
+import { getListOfMatches } from './updater.js';
 var chart;
-
-class Summary {
-  constructor(nome) {
-    this.nome = nome;
-    this.titulos = 0;
-    this.g4s = 0;
-    this.z4s = 0;
-    this.histograma = new Array(20).fill(0);
-    this.histPontos = new Array(38*3+1).fill(0);
-  }
-  compareTo(other) {
-    if (this.titulos > other.titulos) return -1;
-    if (this.titulos < other.titulos) return 1;
-    if (this.g4s > other.g4s) return -1;
-    if (this.g4s < other.g4s) return 1;
-    if (this.z4s > other.z4s) return 1;
-    if (this.z4s < other.z4s) return -1;
-    return 0;
-  }
-}
-
-function expectancy(casa, fora) {
-  const deltaRating = casa.rating + HFA - fora.rating;
-  const divisor = 1 + Math.pow(10, -deltaRating / DIVISOR_ELO) + Math.pow(10, deltaRating / DIVISOR_ELO);
-  let win = Math.pow(10, deltaRating / DIVISOR_ELO) / divisor;
-  let draw = 1 / divisor;
-  let loss = 1 - win - draw;
-  return [win, draw, loss]
-}
-
-class Expectancy {
-  constructor(casa, fora) {
-    const deltaRating = casa.rating + HFA - fora.rating;
-    const divisor = 1 + Math.pow(10, -deltaRating / DIVISOR_ELO) + Math.pow(10, deltaRating / DIVISOR_ELO);
-    this.win = Math.pow(10, deltaRating / DIVISOR_ELO) / divisor;
-    this.draw = 1 / divisor;
-    this.loss = 1 - this.win - this.draw;
-  }
-}
-
-function compareTeams(one, other){
-  if (one.points > other.points) return -1;
-  if (one.points < other.points) return 1;
-  if (one.wins > other.wins) return -1;
-  if (one.wins < other.wins) return 1;
-  if (one.goalDiff > other.goalDiff) return -1;
-  if (one.goalDiff < other.goalDiff) return 1;
-  if (one.goalsFor > other.goalsFor) return -1;
-  if (one.goalsFor < other.goalsFor) return 1;
-  return 0; 
-}
+import { DIVISOR_ELO, IMPORTANCE, N_SIMS, HFA, PCT_VITORIA_SALDO_5, PCT_VITORIA_SALDO_4, PCT_VITORIA_SALDO_3, PCT_VITORIA_SALDO_2, PCT_EMPATE_0, PCT_EMPATE_1, PCT_EMPATE_2, PCT_DERROTA_1, PCT_DERROTA_2, N_RUNS, RUNS, Summary, expectancy, compareTeams, Team, computeMatch, simulateMatchELOHFA, computePastMatches } from './base.js';
 
 
-class Team {
-  static INITIAL_RATING = 1000.0;
-  points = 0;
-  wins = 0;
-  rating = Team.INITIAL_RATING;
-  goalsFor = 0;
-  goalsAgainst = 0;
-  goalDiff = 0;
-  name = "";
-    
-  constructor(name) {
-    this.name = name;
-    this.wins = 0;
-    this.points = 0;
-    this.rating = Team.INITIAL_RATING;
-    this.goalsAgainst = 0;
-    this.goalsFor = 0;
-    this.goalDiff = 0;
-  } 
-  
-  compareTo(other) {
-    return compareTeams(this, other);
-  }
-}
-
-function computeMatch(homeTeam, awayTeam, homeScore, awayScore) {
-  let homePoints = 0;
-  let awayPoints = 0; 
-  let homeWins = 0;
-  let awayWins = 0;
-  let result = 0.5;
-  
-  if (homeScore > awayScore) {
-    homePoints = 3;
-    homeWins = 1;
-    result = 1;
-  } else if (homeScore == awayScore) {
-    homePoints = 1;
-    awayPoints = 1;
-  } else {
-    awayPoints = 3;
-    awayWins = 1;
-    result = 0;
-  }
-
-  const goalDiff = Math.abs(homeScore - awayScore);
-  let factor = 1;
-  if (goalDiff == 2) factor = 1.5;
-  if (goalDiff == 3) factor = 1.75;
-  if (goalDiff > 3) factor = (1.75 + ((goalDiff - 3.0) / 8.0));
-
-  homeTeam.goalsFor += homeScore;
-  homeTeam.goalsAgainst += awayScore;
-  homeTeam.goalDiff = homeTeam.goalsFor - homeTeam.goalsAgainst;
-  homeTeam.points += homePoints;
-  homeTeam.wins += homeWins;
-
-  awayTeam.goalsFor += awayScore;
-  awayTeam.goalsAgainst += homeScore;
-  awayTeam.goalDiff = awayTeam.goalsFor - awayTeam.goalsAgainst;
-  awayTeam.points += awayPoints;
-  awayTeam.wins += awayWins;
-  
-  const deltaRating = homeTeam.rating - awayTeam.rating +HFA;
-  const winExpectancy = (1 / (1 + Math.pow(10, -(deltaRating) / DIVISOR_ELO)));
-  const adjust = IMPORTANCE * factor * (result - winExpectancy);
-  homeTeam.rating += adjust;
-  awayTeam.rating -= adjust;
-
-
-}
-
-function simulateMatchELOHFA(casa, fora) {
-  let [winExpectancy, drawExpectancy] = expectancy(casa, fora);
-  //const exp = new Expectancy(casa, fora);
-  //const winExpectancy = exp.win;
-  //const drawExpectancy = exp.draw;
-  const alea = Math.random();
-  const alea2 = Math.random();
-  let homeScore = 0;
-  let awayScore = 0;
-  
-  if (alea < winExpectancy * PCT_VITORIA_SALDO_5) {
-    homeScore = 5;
-    awayScore = 0;
-  } else if (alea < winExpectancy * PCT_VITORIA_SALDO_4) {
-    if (alea2 < 0.9) {
-      homeScore = 4;
-      awayScore = 0;    
-    } else{
-      homeScore = 5;
-      awayScore = 1;
-    }
-  } else if (alea < winExpectancy * PCT_VITORIA_SALDO_3) {
-    homeScore = 3;
-    awayScore = 1;
-    if ((alea2 > 0.7) && (alea2 < 0.95)) {
-      homeScore = 4;
-      awayScore = 1;
-    }
-    if (alea2 > 0.95) {
-      homeScore = 5
-      awayScore = 2
-    }
-  } else if (alea < winExpectancy * PCT_VITORIA_SALDO_2) {
-    homeScore = 2;
-    awayScore = 0;
-    if ((alea2 > 0.70) && (alea2 < 0.95)) {
-      homeScore = 3;
-      awayScore = 1;
-    }
-    if (alea2 > 0.95) {
-      homeScore = 4;
-      awayScore = 2;
-    }
-
-  } else if (alea < winExpectancy) {
-    homeScore = 1;
-    awayScore = 0;
-    if ((alea2 > 0.60) && (alea2 < 0.95)) {
-      homeScore = 2;
-      awayScore = 1;
-    }
-    if (alea2 > 0.95) {
-      homeScore = 3;
-      awayScore = 2;
-    }
-    if (alea2 > 0.99) {
-      homeScore = 4;
-      awayScore = 3;
-    }
-    
-  } else if (alea - winExpectancy < drawExpectancy) {
-      homeScore = 0;
-      awayScore = 0;
-      if ((alea2 > 0.60) && (alea2 < 0.95)) {
-        homeScore = 1;
-        awayScore = 1;
-      }
-      if (alea2 > 0.95) {
-        homeScore = 2;
-        awayScore = 2;
-      }
-  } else {
-    if (Math.random() < PCT_DERROTA_1) {
-      homeScore = 0;
-      awayScore = 1;
-      if ((alea2 > 0.60) && (alea2 < 0.95)) {
-        homeScore = 1;
-        awayScore = 2;
-      }
-      if (alea2 > 0.95) {
-        homeScore = 2;
-        awayScore = 3;
-      }            
-    } else {
-          homeScore = 0;
-          awayScore = 2;
-          if ((alea2 > 0.60) && (alea2 < 0.95)) {
-            homeScore = 1;
-            awayScore = 3;
-          }
-          if (alea2 > 0.95) {
-            homeScore = 2;
-            awayScore = 4;
-          }
-    }
-  }
-  return [ homeScore, awayScore];  
-}
-
+let listOfMatches;
 
 
 /**
@@ -245,19 +11,41 @@ function simulateMatchELOHFA(casa, fora) {
  * @param {*} ratings : an array of Team sorted by ratings
  */
 
-function displayRatings(ratings){
+function displayRatings(ratings) {
   let rows = [];
-  for (let i = 0; i < ratings.length; i++){
+  for (let i = 0; i < ratings.length; i++) {
     let t = ratings[i];
-    let badge = badgesDictionary[t.name];
-    rows.push(`<tr><td>${i+1}</td><td><img height='40' width='40' src='${badge}' alt='${t.name}'></img</td><td>${t.rating.toFixed(2)}</td><td>${t.points}</td><td>${t.wins}</td><td>${t.goalDiff}</td><td>${t.goalsFor}</td></tr>`);
+    rows.push(
+      `<tr>
+        <td>${i + 1}</td>
+        <td class="nome">${t.name}</td>
+        <td class="number">${t.rating.toFixed(2)}</td>
+        <td>${t.points}</td>
+        <td>${t.matches}</td>
+        <td>${t.wins}</td>
+        <td>${t.goalDiff}</td>
+        <td>${t.goalsFor}</td>
+        <td>${t.goalsAgainst}</td>
+      </tr>`);
   }
-  let table = "<h2>Ratings e Campanha</h2><table border='1'><tr><th>#</th><th>Time</th><th>Rating</th><th>PG</th><th>Vitórias</th><th>Saldo</th><th>Gols pró</th></tr>" + rows.join("") + "</table>";
+  let table = `<h2>ratings e campanha</h2>
+      <table border='1'>
+      <tr>
+        <th>#</th>
+        <th>time</th>
+        <th>rating</th>
+        <th>pg</th>
+        <th>j</th>
+        <th>v</th>
+        <th>sg</th>
+        <th>gp</th>
+        <th>gc</th>
+      </tr>` + rows.join("") + "</table>";
   document.getElementById("divRatings").innerHTML = table;
-  
+
 }
 
-function enableEditGame(event){
+function enableEditGame(event) {
   let button = event.srcElement;
   let index = button.id.substring(11);
   let td_home = document.getElementById(`homeScore_${index}`);
@@ -271,21 +59,21 @@ function enableEditGame(event){
   button.innerHTML = "Salvar";
 }
 
-function saveEditedGame(event){
+function saveEditedGame(event) {
   let button = event.srcElement;
   let index = button.id.substring(11);
   let homeInput = document.getElementById(`inputHome_${index}`);
   let awayInput = document.getElementById(`inputAway_${index}`);
   let g = listOfMatches[parseInt(index)];
-  if (homeInput.value === "" || awayInput.value === ""){
+  if (homeInput.value === "" || awayInput.value === "") {
     g.done = false;
   } else {
     g.done = true;
   }
   g.homeScore = homeInput.value;
   g.awayScore = awayInput.value;
-  document.getElementById(`homeScore_${index}`).innerHTML = ""+ g.homeScore;
-  document.getElementById(`awayScore_${index}`).innerHTML = ""+ g.awayScore;
+  document.getElementById(`homeScore_${index}`).innerHTML = "" + g.homeScore;
+  document.getElementById(`awayScore_${index}`).innerHTML = "" + g.awayScore;
 
   button.removeEventListener('click', saveEditedGame);
   button.addEventListener('click', enableEditGame)
@@ -295,21 +83,19 @@ function saveEditedGame(event){
 
 function displayListOfMatches(listOfMatches) {
   let table = "<h2>Lista completa de jogos</h2><table border='1'><tr><th>#</th><th>Rodada</th><th>Mandante</th><th></th><th>x</th><th></th><th>Visitante</th><th>Data</th></tr>";
-  let lastDoneMatch = listOfMatches.filter((a) => a.done).reduce((acc, curr) => curr );
+  let lastDoneMatch = listOfMatches.filter((a) => a.done).reduce((acc, curr) => curr);
   let firstUndone = listOfMatches.filter(a => !a.done)[0];
   listOfMatches.forEach((game, i) => {
-    let homeBadge = badgesDictionary[game.homeTeam];
-    let awayBadge = badgesDictionary[game.awayTeam];
 
-    let data = game.date?game.date.substring(8,10)+game.date.substring(4,8)+game.date.substring(0,4)+game.date.substring(10):"a definir";
+    let data = game.date ? game.date : "a definir";
     table += `<tr id="jogo${game.number}">
           <td>${game.number}</td>
-          <td>${Math.ceil(game.number/10)}</td>
-          <td><img height='40' width='40' src='${homeBadge}' title='${game.homeTeam}'</img></td>
+          <td>${game.round}</td>
+          <td>${game.homeTeam}</td>
           <td id="homeScore_${i}">${game.homeScore}</td>
           <td>X</td>
           <td id="awayScore_${i}">${game.awayScore}</td>
-          <td><img height='40' width='40' src='${awayBadge}' title='${game.awayTeam}'</img>
+          <td>${game.awayTeam}</td>
           <td>${data}</td>
           <td><button class="editMatchButton" id="editButton_${i}">Editar</button></td>
 
@@ -318,22 +104,23 @@ function displayListOfMatches(listOfMatches) {
   table += "</table>";
   document.getElementById("divMatches").innerHTML = table;
   document.getElementById(`jogo${firstUndone.number}`).scrollIntoView({ behavior: 'smooth' });
-  for( button of  document.getElementsByClassName("editMatchButton") ) {
+  for (const button of document.getElementsByClassName("editMatchButton")) {
     button.addEventListener('click', enableEditGame);
 
   }
 }
 
-function displayNextMatches(homeTeams, awayTeams, expectancies){
-  rows = homeTeams.map((homeTeam, i) => {return `
+function displayNextMatches(homeTeams, awayTeams, expectancies) {
+  let rows = homeTeams.map((homeTeam, i) => {
+    return `
     <tr>
-      <td><img height='40' width='40' src='${badgesDictionary[homeTeam.name]}' title='${homeTeam.name}'></img></td>
+      <td>${homeTeam.name}</td>
       <td>${homeTeam.rating.toFixed(2)}</td>
-      <td>${(100*expectancies[i][0]).toFixed(2)}%</td>
-      <td>${(100*expectancies[i][1]).toFixed(2)}%</td>
-      <td>${(100*expectancies[i][2]).toFixed(2)}%</td>
+      <td>${(100 * expectancies[i][0]).toFixed(2)}%</td>
+      <td>${(100 * expectancies[i][1]).toFixed(2)}%</td>
+      <td>${(100 * expectancies[i][2]).toFixed(2)}%</td>
       <td>${awayTeams[i].rating.toFixed(2)}</td>
-      <td><img height='40' width='40' src='${badgesDictionary[awayTeams[i].name]}' title='${awayTeams[i].name}'></img></td>
+      <td>${awayTeams[i].name}</td>
     </tr>
   `});
 
@@ -347,39 +134,12 @@ function displayNextMatches(homeTeams, awayTeams, expectancies){
       <th>Rating</th>
       <th>Visitante</th>
   </tr>${rows.join("")}</table>`;
-  
+
   document.getElementById("divNextMatches").innerHTML = table;
 
 }
 
-/**
- * Computes ratings and campaigns from a list of matches.
- * @param {[Object]} alistOfMatches : an array of matches 
- * @returns [ranking, realCampaign] : um array com um array de times ordenado por rating e um dicionário dos nomesDostimes -> campanhas
- */
-function computePastMatches(alistOfMatches) {
-    const pastMatches = alistOfMatches.filter(match => match.done);
-    
-    let realCampaign = new Map();
-    for (let aMatch of pastMatches) {
-        if (!realCampaign.has(aMatch.homeTeam)) {
-          realCampaign.set(aMatch.homeTeam, new Team(aMatch.homeTeam));
-        }
-        if (!realCampaign.has(aMatch.awayTeam)) {
-          realCampaign.set(aMatch.awayTeam, new Team(aMatch.awayTeam));
-        }
-        let tCasa = realCampaign.get(aMatch.homeTeam);
-        let tFora = realCampaign.get(aMatch.awayTeam);
-        computeMatch(tCasa, tFora, parseInt(aMatch.homeScore), parseInt(aMatch.awayScore));
-    }
 
-    const ranking = [];
-    for ([name, team] of realCampaign) {
-        ranking.push(team);
-    }
-    ranking.sort((a, b) => b.rating - a.rating);
-    return [ranking, realCampaign];
-}
 
 /**
  * Calculate the win/draw/loss expectancy of the next 10 upcoming matches.
@@ -387,31 +147,31 @@ function computePastMatches(alistOfMatches) {
  * @param {*} realCampaign a
  * @returns 
  */
-function calculateNextExpectancies(upcomingMatches, realCampaign){
-    const mandantes = [];
-    const visitantes = [];
-    const expectancies = [];
-    
-    for (let i = 0; i < Math.min(10, upcomingMatches.length); i++) {
-        let casa = realCampaign.get(upcomingMatches[i].homeTeam);
-        if (casa === undefined) {
-        casa = new Team(upcomingMatches[i].homeTeam);
-        }
-        let fora = realCampaign.get(upcomingMatches[i].awayTeam);
-        if (fora === undefined) {
-        fora = new Team(upcomingMatches[i].awayTeam);
-        }
-        const exp = expectancy(casa, fora);
-        mandantes.push(casa);
-        visitantes.push(fora);
-        expectancies.push(exp);
+function calculateNextExpectancies(upcomingMatches, realCampaign) {
+  const mandantes = [];
+  const visitantes = [];
+  const expectancies = [];
+
+  for (let i = 0; i < Math.min(10, upcomingMatches.length); i++) {
+    let casa = realCampaign.get(upcomingMatches[i].homeTeam);
+    if (casa === undefined) {
+      casa = new Team(upcomingMatches[i].homeTeam);
     }
-    return [ mandantes, visitantes, expectancies];
+    let fora = realCampaign.get(upcomingMatches[i].awayTeam);
+    if (fora === undefined) {
+      fora = new Team(upcomingMatches[i].awayTeam);
+    }
+    const exp = expectancy(casa, fora);
+    mandantes.push(casa);
+    visitantes.push(fora);
+    expectancies.push(exp);
+  }
+  return [mandantes, visitantes, expectancies];
 }
 
-function displaySummary(summary, n_sims){
-    console.log(summary, n_sims);
-    let table = `<h2>Resumo da Simulação</h2>
+function displaySummary(summary, n_sims) {
+  console.log(summary, n_sims);
+  let table = `<h2>Resumo da Simulação</h2>
                     <table border='1'>
                     <tr><th>#</th><th>Time</th>
                     <th>Tí­tulo</th>
@@ -421,24 +181,24 @@ function displaySummary(summary, n_sims){
                     <th>G13-16</th>
                     <th>Z4</th>
                     </tr>`;
-    summary.forEach((stats, i) => {
-        
-        table += `<tr><td>${i+1}</td>
-                    <td><img height='40' width='40' src='${badgesDictionary[stats.nome]}' title='${stats.nome}'</img></td>
-                    <td>${(100*stats.histograma[0]/n_sims).toFixed(2)}</td>
-                    <td>${(100*stats.histograma.slice(0,4).reduce((a,b)=> a+b)/n_sims).toFixed(2)}</td>
-                    <td>${(100*stats.histograma.slice(0,6).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
-                    <td>${(100*stats.histograma.slice(6,12).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
-                    <td>${(100*stats.histograma.slice(12,16).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
-                    <td>${(100*stats.histograma.slice(16,20).reduce((a,b) => a+b)/n_sims).toFixed(2)}</td>
+  summary.forEach((stats, i) => {
+
+    table += `<tr><td>${i + 1}</td>
+                    <td class="nome">${stats.nome}</td>
+                    <td>${(100 * stats.histograma[0] / n_sims).toFixed(2)}</td>
+                    <td>${(100 * stats.histograma.slice(0, 4).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
+                    <td>${(100 * stats.histograma.slice(0, 6).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
+                    <td>${(100 * stats.histograma.slice(6, 12).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
+                    <td>${(100 * stats.histograma.slice(12, 16).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
+                    <td>${(100 * stats.histograma.slice(16, 20).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
                 </tr>`;
-    });
-    table += "</table>";
-    document.getElementById("divSummary").innerHTML = table;
-    displayGraphs(summary);
+  });
+  table += "</table>";
+  document.getElementById("divSummary").innerHTML = table;
+  displayGraphs(summary);
 }
 
-function displayGraphs(summary){
+function displayGraphs(summary) {
   // Get a reference to the select element and the button element
   var itemSelect = document.getElementById("item-select");
   var plotButton = document.getElementById("plot-button");
@@ -447,180 +207,180 @@ function displayGraphs(summary){
   // Populate the select element with the names of the items in the array
   itemSelect.innerHTML = "";
   for (var i = 0; i < summary.length; i++) {
-      var option = document.createElement("option");
-      option.text = summary[i].nome;
-      itemSelect.add(option);
+    var option = document.createElement("option");
+    option.text = summary[i].nome;
+    itemSelect.add(option);
   }
 
   // Add an event listener to the button element
   plotButton.addEventListener("click", function() {
-      // Find the selected items in the array
-      var selectedItems = [];
-      var selectedOptions = Array.from(itemSelect.selectedOptions);
-      for (var i = 0; i < selectedOptions.length; i++) {
-          var selectedItem = summary.find(function(item) {
-              return item.nome === selectedOptions[i].value;
-          });
-          if (selectedItem) {
-              selectedItems.push(selectedItem);
-          }
+    // Find the selected items in the array
+    var selectedItems = [];
+    var selectedOptions = Array.from(itemSelect.selectedOptions);
+    for (var i = 0; i < selectedOptions.length; i++) {
+      var selectedItem = summary.find(function(item) {
+        return item.nome === selectedOptions[i].value;
+      });
+      if (selectedItem) {
+        selectedItems.push(selectedItem);
       }
+    }
 
-      var colorPalette = [    "#a6cee3",    "#1f78b4",    "#b2df8a",    "#33a02c",    "#fb9a99",    "#e31a1c",    "#fdbf6f",    "#ff7f00",    "#cab2d6",    "#6a3d9a",    "#ffff99",    "#b15928",    "#8dd3c7",    "#ffffb3",    "#bebada",    "#fb8072",    "#80b1d3",    "#fdb462",    "#fccde5",    "#d9d9d9"];
-      // Update the chart data object
-      var chartData = {
-          labels: selectedItems[0].histograma.map(function(_, index) {
-              return ""+(index + 1)+"º";
-          }),
-          datasets: selectedItems.map(function(item, index) {
-              return {
-                  label: item.nome,
-                  backgroundColor: colorPalette[index % colorPalette.length],
-                  borderColor: colorPalette[index % colorPalette.length],
-                  borderWidth: 1,
-                  data: item.histograma.map(a => 100.0*a/(N_SIMS*N_RUNS))
-              };
-          })
-      };
+    var colorPalette = ["#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928", "#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3", "#fdb462", "#fccde5", "#d9d9d9"];
+    // Update the chart data object
+    var chartData = {
+      labels: selectedItems[0].histograma.map(function(_, index) {
+        return "" + (index + 1) + "º";
+      }),
+      datasets: selectedItems.map(function(item, index) {
+        return {
+          label: item.nome,
+          backgroundColor: colorPalette[index % colorPalette.length],
+          borderColor: colorPalette[index % colorPalette.length],
+          borderWidth: 1,
+          data: item.histograma.map(a => 100.0 * a / (N_SIMS * N_RUNS))
+        };
+      })
+    };
 
 
 
 
-      // Update the chart options object
-      var chartOptions = {
-        plugins: {
+    // Update the chart options object
+    var chartOptions = {
+      plugins: {
+        title: {
+          display: true,
+          text: 'Projeção de posição final'
+        }
+      },
+      scales: {
+        x: {
           title: {
-              display: true,
-              text: 'Projeção de posição final'
+            display: true,
+            text: 'Posição'
           }
         },
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Posição'
-            }
-          },
-          y: {
-            title: {
-              display: true,
-              text: 'Probabilidade (%)'
-            }
-          },
-          yAxes: [{
-            ticks: {
-              beginAtZero: true
-            }
-          }]
-        }
-      };
-
-      // Destroy any existing chart objects
-      if (chart !== undefined) {
-          chart.destroy();
+        y: {
+          title: {
+            display: true,
+            text: 'Probabilidade (%)'
+          }
+        },
+        yAxes: [{
+          ticks: {
+            beginAtZero: true
+          }
+        }]
       }
+    };
 
-      // Create the chart object
-      var histogramCanvas = document.getElementById("histogram-chart");
-      chart = new Chart(histogramCanvas, {
-          type: 'bar',
-          data: chartData,
-          options: chartOptions
-      });
+    // Destroy any existing chart objects
+    if (chart !== undefined) {
+      chart.destroy();
+    }
+
+    // Create the chart object
+    var histogramCanvas = document.getElementById("histogram-chart");
+    chart = new Chart(histogramCanvas, {
+      type: 'bar',
+      data: chartData,
+      options: chartOptions
+    });
   });
   plotPoints.addEventListener("click", function() {
-      // Find the selected items in the array
-      var selectedItems = [];
-      var selectedOptions = Array.from(itemSelect.selectedOptions);
-      for (var i = 0; i < selectedOptions.length; i++) {
-          var selectedItem = summary.find(function(item) {
-              return item.nome === selectedOptions[i].value;
-          });
-          if (selectedItem) {
-              selectedItems.push(selectedItem);
-          }
+    // Find the selected items in the array
+    var selectedItems = [];
+    var selectedOptions = Array.from(itemSelect.selectedOptions);
+    for (var i = 0; i < selectedOptions.length; i++) {
+      var selectedItem = summary.find(function(item) {
+        return item.nome === selectedOptions[i].value;
+      });
+      if (selectedItem) {
+        selectedItems.push(selectedItem);
       }
+    }
 
-      var colorPalette = [    "#a6cee3",    "#1f78b4",    "#b2df8a",    "#33a02c",    "#fb9a99",    "#e31a1c",    "#fdbf6f",    "#ff7f00",    "#cab2d6",    "#6a3d9a",    "#ffff99",    "#b15928",    "#8dd3c7",    "#ffffb3",    "#bebada",    "#fb8072",    "#80b1d3",    "#fdb462",    "#fccde5",    "#d9d9d9"];
-      // Update the chart data object
-      var chartData = {
-          labels: selectedItems[0].histPontos.map(function(_, index) {
-              return index;
-          }),
-          datasets: selectedItems.map(function(item, index) {
-              return {
-                  label: item.nome,
-                  backgroundColor: colorPalette[index % colorPalette.length],
-                  borderColor: colorPalette[index % colorPalette.length],
-                  borderWidth: 1,
-                  data: item.histPontos.map(a => 100.0*a/(N_SIMS*N_RUNS))
-              };
-          })
-      };
+    var colorPalette = ["#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928", "#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3", "#fdb462", "#fccde5", "#d9d9d9"];
+    // Update the chart data object
+    var chartData = {
+      labels: selectedItems[0].histPontos.map(function(_, index) {
+        return index;
+      }),
+      datasets: selectedItems.map(function(item, index) {
+        return {
+          label: item.nome,
+          backgroundColor: colorPalette[index % colorPalette.length],
+          borderColor: colorPalette[index % colorPalette.length],
+          borderWidth: 1,
+          data: item.histPontos.map(a => 100.0 * a / (N_SIMS * N_RUNS))
+        };
+      })
+    };
 
-      // Update the chart options object
-      var chartOptions = {
-        plugins: {
+    // Update the chart options object
+    var chartOptions = {
+      plugins: {
+        title: {
+          display: true,
+          text: 'Projeção de Pontuação Final'
+        }
+      },
+      scales: {
+        x: {
           title: {
-              display: true,
-              text: 'Projeção de Pontuação Final'
+            display: true,
+            text: 'Pontos'
           }
         },
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Pontos'
-            }
-          },
-          y: {
-            title: {
-              display: true,
-              text: 'Probabilidade (%)'
-            }
-          }, 
-          yAxes: [{
-            ticks: {
-              beginAtZero: true
-            }
-          }]
-        }
-      };
-
-      // Destroy any existing chart objects
-      if (chart !== undefined) {
-          chart.destroy();
+        y: {
+          title: {
+            display: true,
+            text: 'Probabilidade (%)'
+          }
+        },
+        yAxes: [{
+          ticks: {
+            beginAtZero: true
+          }
+        }]
       }
+    };
 
-      // Create the chart object
-      var histogramCanvas = document.getElementById("histogram-chart");
-      chart = new Chart(histogramCanvas, {
-          type: 'bar',
-          data: chartData,
-          options: chartOptions
-      });
+    // Destroy any existing chart objects
+    if (chart !== undefined) {
+      chart.destroy();
+    }
+
+    // Create the chart object
+    var histogramCanvas = document.getElementById("histogram-chart");
+    chart = new Chart(histogramCanvas, {
+      type: 'bar',
+      data: chartData,
+      options: chartOptions
+    });
   });
 
 }
 
- 
+
 
 const clickHandler = (clickEvent) => {
   let mapinha = [...document.querySelectorAll(".menuItemButton")].map((x, i, arr) => [i, x]);
   let buttonIndex = mapinha.filter((el, i, arr) => el[1].id == clickEvent.srcElement.id)[0][0];
   let pannels = document.querySelectorAll(".slide");
   document.querySelector("#menuPanel").classList.add("left");
-  for (let i = 0; i< pannels.length; i++){
+  for (let i = 0; i < pannels.length; i++) {
     let cl = pannels[i].classList;
-    if (i < buttonIndex){
+    if (i < buttonIndex) {
       cl.remove("right");
       cl.add("left");
     }
-    if (i == buttonIndex){
+    if (i == buttonIndex) {
       cl.remove("left");
       cl.remove("right");
     }
-    if ( i> buttonIndex){
+    if (i > buttonIndex) {
       cl.remove("left");
       cl.add("right");
     }
@@ -647,73 +407,172 @@ function showPanel(id) {
   }
 }
 
+
 function messageFromWorker(event) {
   let data = event.data;
   if (data[0] == 'done') {
     RUNS.push(data[1]);
     if (RUNS.length == N_RUNS) {
-      let consolidado = RUNS.reduce ((acc, curr, index, arr) => {
+      document.querySelector("#progDialog").close();
+      let consolidado = RUNS.reduce((acc, curr, index, arr) => {
         let newAcc = [];
-        for (item of curr){
+        for (let item of curr) {
           let itemInAcc = acc.filter(x => x.nome == item.nome)[0];
           item.titulos += itemInAcc.titulos;
           item.z4s += itemInAcc.z4s;
-          for (val in item.histograma) {
+          for (let val in item.histograma) {
             item.histograma[val] += itemInAcc.histograma[val];
           }
-          for (pts in item.histPontos) {
+          for (let pts in item.histPontos) {
             item.histPontos[pts] += itemInAcc.histPontos[pts];
           }
           newAcc.push(item);
         }
         return newAcc;
       });
-      displaySummary(consolidado, N_SIMS*N_RUNS);
+      displaySummary(consolidado, N_SIMS * N_RUNS);
+      displayBrierScore(consolidado, N_SIMS * N_RUNS);
       showPanel("#divSummary");
     }
   }
-  if (data[0]== 'progress') {
-    console.log("progress from worker: ", event);
-  }
+  if (data[0] == 'progress') {
+    let prog = document.querySelector("#simProg");
+    prog.value = parseFloat(prog.value) + 5 / N_RUNS;
 
+  }
+}
+
+
+function runSimulation() {
+  let [ranking, realCampaign] = computePastMatches(listOfMatches);
+  const upcomingMatches = listOfMatches.filter(match => !match.done);
+  displayRatings(ranking);
+  let [mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
+  displayNextMatches(mandantes, visitantes, expectancies);
+  RUNS.length = 0;
+  document.querySelector("#simProg").value = 0;
+  document.querySelector("#progDialog").showModal();
+  var itemSelect = document.querySelector("#method");
+  var selectedItems = [];
+  var selectedOption = Array.from(itemSelect.selectedOptions)[0].value;
+  console.log(selectedOption);
+  for (let i = 0; i < N_RUNS; i++) {
+    let worker = new Worker("worker.js", { type: 'module' });
+    worker.onmessage = messageFromWorker;
+    worker.postMessage(['run', upcomingMatches, realCampaign, N_SIMS, selectedOption]);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {
-    document.querySelector("#menuButton").addEventListener('click', (e) => {
-      let menuPanel = document.querySelector("#menuPanel");
-      if (menuPanel.classList.contains("left")) {
-        menuPanel.classList.remove("left");
-      } else {
-        menuPanel.classList.add("left");
-      }
-    });
+  document.querySelector("#menuButton").addEventListener('click', (e) => {
+    let menuPanel = document.querySelector("#menuPanel");
+    if (menuPanel.classList.contains("left")) {
+      menuPanel.classList.remove("left");
+    } else {
+      menuPanel.classList.add("left");
+    }
+  });
 
-    document.querySelectorAll(".menuItemButton").forEach(x => (
-      x.addEventListener('click', clickHandler)
-    ));
+  document.querySelectorAll(".menuItemButton").forEach(x => (
+    x.addEventListener('click', clickHandler)
+  ));
+  document.querySelector("#btNewSim").addEventListener('click', runSimulation);
+  const parametros = new URLSearchParams(window.location.search);
+
+  // Acessando os valores
+  const tournament = parametros.get('t') ?? 325;   // 'Daniel'
+  const season = parametros.get('s') ?? 72034;
+  const rounds = parametros.get('r') ?? 38;
+
+  console.log(`t: ${tournament}, s: ${season}, r: ${rounds}`);
+
+  getListOfMatches(tournament, season, rounds).then(l => {
+    listOfMatches = l;
     listOfMatches.sort((a, b) => {
-      if (a.date == null) { 
-        if (b.date == null) return b.done - a.done;
-        else return 1; // b > a
-      } 
-      if (b.date == null) {
-        return -1;
-      }
-      if (a.date > b.date) return 1;
-      if (a.date == b.date) return a.number - b.number;
+      if (a.timestamp > b.timestamp) return 1;
+      if (a.timestamp == b.timestamp) return a.number - b.number;
       return -1;
     });
     displayListOfMatches(listOfMatches);
-    let [ranking, realCampaign] = computePastMatches(listOfMatches);
+    runSimulation();
+  }); //fecha o then
+});
+
+function helperBrier(index, teamStats, start, stop) {
+  return ((index >= start && index < stop ? 1 : 0) - teamStats.histograma.slice(start, stop).reduce((a, b) => a + b) / (N_RUNS * N_SIMS)) ** 2;
+}
+
+function displayBrierScore(summary, n_sims) {
+  for (let i = 0; i < listOfMatches.length; i++) {
+    if (!listOfMatches[i].done && listOfMatches[i].homeScore != "" && listOfMatches[i].awayScore != "") {
+      listOfMatches[i].done = 1;
+    }
+  }
+  let [ranking, realCampaign] = computePastMatches(listOfMatches);
+  ranking.sort((a, b) => a.compareTo(b));
+  let table = `<h2>Brier Score</h2>
+                    <table border='1'>
+                    <tr><th>#</th><th>Time</th>
+                    <th>TÃ­tulo</th>
+                    <th>G4</th>
+                    <th>G6</th>
+                    <th>G7-12</th>
+                    <th>G13-16</th>
+                    <th>Z4</th>
+                    <th>Î£1</th>
+                    <th>Î£2</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td> 
+                    </tr>`;
+  let brScore = 0;
+  let brScoreGrand = 0;
+  for (let index = 0; index < ranking.length; index++) {
+    let team = ranking[index];
+    let teamStats = summary.filter(x => x.nome == team.name)[0];
+    console.log(teamStats);
+    let brTitle = helperBrier(index, teamStats, 0, 1);
+    let brG4 = helperBrier(index, teamStats, 0, 4);
+    let brG6 = helperBrier(index, teamStats, 0, 6);
+    let brG712 = helperBrier(index, teamStats, 6, 12);
+    let brG1316 = helperBrier(index, teamStats, 12, 16);
+    let brZ4 = helperBrier(index, teamStats, 16, 20);
+    let teamTotal = brTitle + brG4 + brG6 + brG712 + brG1316 + brZ4;
+    let teamGrandTotal = 0;
+    let details = "";
+    for (let [pos, count] of teamStats.histograma.entries()) {
+      let posBrier = ((pos == index ? 1 : 0) - count / n_sims) ** 2;
+      teamGrandTotal += posBrier;
+      details = details += `<td class="brier">${posBrier.toFixed(2)}</td>`;
+    }
+
+    brScoreGrand += teamGrandTotal;
+    brScore += teamTotal;
+    table += `<tr><td>${index + 1}</td><td>${teamStats.nome}</td>
+    <td class="brier">${brTitle.toFixed(2)}</td>
+    <td class="brier">${brG4.toFixed(2)}</td>
+    <td class="brier">${brG6.toFixed(2)}</td>
+    <td class="brier">${brG712.toFixed(2)}</td>
+    <td class="brier">${brG1316.toFixed(2)}</td>
+    <td class="brier">${brZ4.toFixed(2)}</td>
+    <td class="brier">${teamTotal.toFixed(2)}</td>
+    <td class="brier">${teamGrandTotal.toFixed(2)}</td>${details}</tr>`;
+  }
+  table += `</table><h2>Total: ${brScore.toFixed(2)} Grand: ${brScoreGrand.toFixed(2)}</h2>`;
+
+  document.getElementById("hidden").innerHTML = table;
+  document.querySelectorAll(".brier").forEach(element => {
+    element.style.backgroundColor = "rgba(255,0,0," + element.innerHTML + ")";
+  });
+}
+
+/*em vez do runSimulation()...
+ let [ranking, realCampaign] = computePastMatches(listOfMatches);
     const upcomingMatches = listOfMatches.filter(match => !match.done);
     displayRatings(ranking);
-    let [ mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
+    let [mandantes, visitantes, expectancies] = calculateNextExpectancies(upcomingMatches, realCampaign);
     displayNextMatches(mandantes, visitantes, expectancies);
-    for (let i = 0; i < N_RUNS; i++){
+    for (let i = 0; i < N_RUNS; i++) {
       let worker = new Worker("worker.js");
       worker.onmessage = messageFromWorker;
       worker.postMessage(['run', upcomingMatches, realCampaign, N_SIMS]);
     }
-        
 
-});
+ */
