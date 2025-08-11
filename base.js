@@ -162,6 +162,24 @@ export function computeMatch(homeTeam, awayTeam, homeScore, awayScore) {
 
 }
 
+/**
+ * generates a random number following a poisson distribution
+ * @param lambda - the mean of the distribution
+ * @returns a random positive integer 
+ */
+export function poisson(lambda) {
+  let L = Math.exp(-lambda);
+  let k = 0;
+  let p = 1;
+
+  do {
+    k++;
+    p *= Math.random();
+  } while (p > L);
+
+  return k - 1;
+}
+
 export function simulateMatchELOHFA(casa, fora) {
   let [winExpectancy, drawExpectancy] = expectancy(casa, fora);
   const alea = Math.random();
