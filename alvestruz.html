@@ -1,0 +1,158 @@
+<html>
+   <head>
+      <script type='module' src='./updater.js'></script>
+      <script type='module'>
+      import { getListOfMatches} from './updater.js';
+      let sum = (acc,curr)=>1.0*acc+1.0*curr;
+      function poisson(lambda) {
+         let L = Math.exp(-lambda);
+         let k = 0;
+         let p = 1;
+
+         do {
+            k++;
+            p *= Math.random();
+         } while (p > L);
+
+         return k - 1;
+      }
+
+      function main() {
+         getListOfMatches(325, 72034, 38).then( listOfMatches => {
+            let doneGames = listOfMatches.filter(x => x.done);
+            let totalDoneGames = listOfMatches.length;
+            let meanHomeGoals = listOfMatches
+               .map( x => {return 1.0 * x.homeScore})
+               .reduce(sum)/totalDoneGames;
+            let meanAwayGoals = listOfMatches
+               .map( x => {return 1.0 * x.awayScore})
+               .reduce(sum)/totalDoneGames;
+            let teams = new Set(
+               listOfMatches.map(x => x.homeTeam)
+                  .concat(listOfMatches.map(x=>x.awayTeam)))
+                  .values().toArray();
+            let homeOffEff = new Map();
+            let awayOffEff = new Map();
+            let homeDefVul = new Map();
+            let awayDefVul = new Map();
+            let standings = new Map();
+            teams.forEach(t => {
+               let tHomeGames = doneGames.filter(x=>x.homeTeam == t);
+               let tAwayGames = doneGames.filter(x=>x.awayTeam == t);
+               let tHomeGoals = tHomeGames.map(x=>1.0*x.homeScore).reduce(sum);
+               let tHomeGoalsAgainst = tHomeGames.map(x=>1.0*x.awayScore).reduce(sum);
+               let tAwayGoals = tAwayGames.map(x=>1.0*x.awayScore).reduce(sum);
+               let tAwayGoalsAgainst = tAwayGames.map(x=>1.0*x.homeScore).reduce(sum);
+               homeOffEff.set(t, tHomeGoals/tHomeGames.length)/meanHomeGoals;
+               homeDefVul.set(t, tHomeGoalsAgainst/tHomeGames.length)/meanAwayGoals;
+               awayOffEff.set(t, tAwayGoals/tAwayGames.length)/meanAwayGoals;
+               awayDefVul.set(t, tAwayGoalsAgainst/tAwayGames.length)/meanHomeGoals;
+               standings.set(t, {name:t, g:0, p:0, w:0, d:0, pw:0, pd:0, gf:0, ga:0, gd:0});
+            });
+            let interest_bonus =  1.2;
+            let bigString = '';
+            listOfMatches.forEach((m,i) => {
+               let hoe = homeOffEff.get(m.homeTeam);
+               let hdv = homeDefVul.get(m.homeTeam);
+               let aoe = awayOffEff.get(m.awayTeam);
+               let adv = awayDefVul.get(m.awayTeam);
+               let homeLambda = meanHomeGoals*hoe*adv*interest_bonus;
+               let homePartials = [0,0,0,0,0,0].map(_ => poisson(homeLambda/6));
+               let awayLambda = meanAwayGoals*awayOffEff.get(m.awayTeam)*homeDefVul.get(m.homeTeam)*interest_bonus;
+               let awayPartials = [0,0,0,0,0,0].map(_ => poisson(awayLambda/6));
+               let homeScore = homePartials.reduce(sum);
+               let awayScore = awayPartials.reduce(sum);
+               let diffs = homePartials.map((x, idx) => x-awayPartials[idx]);
+               let homeWin = homeScore > awayScore?1:0;
+               let awayWin = awayScore > homeScore?1:0;
+               let draw = homeScore == awayScore?1:0;
+               let pdraws = diffs.filter(x=>x==0).length;
+               let pHomeWins = diffs.filter(x=>x>0).length;
+               let pAwayWins = diffs.filter(x=>x<0).length;
+
+               let homeStats = standings.get(m.homeTeam);
+               homeStats.g++;
+               homeStats.w+= homeWin;
+               homeStats.d+= draw;
+               homeStats.pw += pHomeWins;
+               homeStats.pd += pdraws;
+               homeStats.gf += homeScore;
+               homeStats.ga += awayScore;
+               homeStats.gd = homeStats.gf-homeStats.ga;
+               homeStats.p += 3*homeWin+2*pHomeWins+pdraws+draw;
+               standings.set(m.homeTeam, homeStats);
+
+               let awayStats = standings.get(m.awayTeam);
+               awayStats.g++;
+               awayStats.w+= awayWin;
+               awayStats.d+= draw;
+               awayStats.pw += pAwayWins;
+               awayStats.pd += pdraws;
+               awayStats.gf += awayScore;
+               awayStats.ga += homeScore;
+               awayStats.gd = awayStats.gf-awayStats.ga;
+               awayStats.p += 3*awayWin+2*pAwayWins+pdraws+draw;
+               standings.set(m.awayTeam, awayStats);
+               bigString += `<tr><td rowspan=2>${i+1}</td><td>${m.homeTeam}</td><td>${homeScore}</td>`;
+               homePartials.forEach((partial,idx)=> {
+                  bigString += `<td class="${diffs[idx]>0?'win':diffs[idx]<0?'loss':'draw'}">${partial}</td>`
+               });
+               bigString += '</tr>';
+               bigString += `<tr><td>${m.awayTeam}</td><td>${awayScore}</td>`;
+               awayPartials.forEach((partial, idx)=> {
+
+                  bigString += `<td class="${diffs[idx]<0?'win':diffs[idx]>0?'loss':'draw'}">${partial}</td>`;
+               });
+               bigString += '</tr>';
+
+            });
+            document.querySelector('#tbMatches').innerHTML = bigString;
+            let orderedStandings = standings.values().toArray();
+            orderedStandings.sort((a,b)=> {
+               if (b.p != a.p) return b.p - a.p;
+               if (b.w != a.p) return b.w - a.w;
+               if (b.pw != a.pw) return b.pw - a.pw;
+               if (b.gd != a.gd) return b.gd - a.gd;
+               return b.gf - a.gf;
+            });
+            let standingsString = ''
+            orderedStandings.forEach((t,i)=>{
+               standingsString += `
+               <tr><td>${i+1}</td>
+               <td>${t.name}</td>
+               <td>${t.p}</td>
+               <td>${t.w}</td>
+               <td>${t.pw}</td>
+               <td>${t.gd}</td>
+               <td>${t.gf}</td>
+               </tr>`;
+
+            });
+            document.querySelector('#tbStandings').innerHTML = standingsString;
+
+
+         });
+      }
+      document.addEventListener("DOMContentLoaded", (event) => {main()});
+   </script>
+   </head>
+<style>
+tbody tr:nth-child(even) {
+  border-bottom: 2px solid black;
+}
+.loss {
+   background-color: lightred;
+}
+.draw {
+   background-color: yellow;
+}
+.win {
+   background-color: lightblue;
+}
+   </style>
+   <body>
+      <div id='standings'><table><thead><tr><th>#</th><th>Time</th><th>Pontos</th><th>Vit&oacute;rias</th><th>Vit&oacute;rias Parciais</th><th>Saldo</th><th>Gols Pr&oacute;</th></tr></thead>
+         <tbody id='tbStandings'></tbody></table></div>
+      <div id='matches'><table border='1'><thead><tr><th>Jogo</th><th>times</th><th>placar</th><th colspan=6>parciais</th></tr></thead><tbody id='tbMatches'></tbody></table></div>
+   </body>
+</html>
