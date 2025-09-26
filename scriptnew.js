@@ -402,6 +402,7 @@ function plotPointsCumulativeFunction(summary) {
 					}
 				},
 				y: {
+					min: 0,
 					title: {
 						display: true,
 						text: 'Probabilidade (%)'
