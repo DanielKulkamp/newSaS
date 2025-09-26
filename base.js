@@ -180,7 +180,44 @@ export function poisson(lambda) {
   return k - 1;
 }
 
+export function simulateMatchAgnostic(){
+  return [ poisson(1.25), poisson(1.25)]; 
+}
+
+export function simulateMatchAgnosticHFA(){
+  return [ poisson(1.38), poisson(1.05)];
+}
+
+
+/**
+ * Simulates a Match using ELO ratings
+ * @param casa - an Object of class Team
+ * @param fora - an Onject of class Team
+ * @returns [homeScore, awayScore];
+ */
 export function simulateMatchELOHFA(casa, fora) {
+  let [winExpectancy, drawExpectancy] = expectancy(casa, fora);
+  let result = Math.random();
+  if (result > winExpectancy+drawExpectancy) { //away win
+    let loser = poisson(0.4 );
+    let winner = loser + poisson(0.4)+1;
+    return [ loser, winner];
+  }
+  if (result > winExpectancy) { //draw
+    let score = poisson(0.37);
+    return [score, score];
+  } 
+  let loser = poisson(0.5);
+  return [loser+1+poisson(0.5), loser];
+}
+
+/**
+ * Simulates a Match using ELO ratings
+ * @param casa - an Object of class Team
+ * @param fora - an Onject of class Team
+ * @returns [homeScore, awayScore];
+ */
+export function simulateMatchELOHFAOld(casa, fora) {
   let [winExpectancy, drawExpectancy] = expectancy(casa, fora);
   const alea = Math.random();
   const alea2 = Math.random();
