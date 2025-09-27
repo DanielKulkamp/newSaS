@@ -5,7 +5,6 @@ import { DIVISOR_ELO, IMPORTANCE, N_SIMS, HFA, PCT_VITORIA_SALDO_5, PCT_VITORIA_
 
 let listOfMatches;
 
-
 /**
  * Updates the: ratings and campaign panel 
  * @param {*} ratings : an array of Team sorted by ratings
@@ -531,7 +530,7 @@ function messageFromWorker(event) {
 }
 
 
-function runSimulation() {
+function runSimulation(n_teams, n_rounds) {
 	let [ranking, realCampaign] = computePastMatches(listOfMatches);
 	const upcomingMatches = listOfMatches.filter(match => !match.done);
 	displayRatings(ranking);
@@ -541,17 +540,17 @@ function runSimulation() {
 	document.querySelector("#simProg").value = 0;
 	document.querySelector("#progDialog").showModal();
 	var itemSelect = document.querySelector("#method");
-	var selectedItems = [];
+	//var selectedItems = [];
 	var selectedOption = Array.from(itemSelect.selectedOptions)[0].value;
 	console.log(selectedOption);
 	for (let i = 0; i < N_RUNS; i++) {
 		let worker = new Worker("worker.js", { type: 'module' });
 		worker.onmessage = messageFromWorker;
-		worker.postMessage(['run', upcomingMatches, realCampaign, N_SIMS, selectedOption]);
+		worker.postMessage(['run', upcomingMatches, realCampaign, N_SIMS, selectedOption, n_teams, n_rounds]);
 	}
 }
 
-document.addEventListener('DOMContentLoaded', (event) => {
+document.addEventListener('DOMContentLoaded', (_event) => {
 	document.querySelector("#menuButton").addEventListener('click', (e) => {
 		let menuPanel = document.querySelector("#menuPanel");
 		if (menuPanel.classList.contains("left")) {
@@ -571,8 +570,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
 	const tournament = parametros.get('t') ?? 325;   // 'Daniel'
 	const season = parametros.get('s') ?? 72034;
 	const rounds = parametros.get('r') ?? 38;
-
-	console.log(`t: ${tournament}, s: ${season}, r: ${rounds}`);
+	const n_teams = parametros.get('n') ?? 20;
+	console.log(`t: ${tournament}, s: ${season}, r: ${rounds}, n: ${n_teams}`);
 
 	getListOfMatches(tournament, season, rounds).then(l => {
 		listOfMatches = l;
@@ -582,7 +581,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 			return -1;
 		});
 		displayListOfMatches(listOfMatches);
-		runSimulation();
+		runSimulation(n_teams, rounds);
 	}); //fecha o then
 });
 
