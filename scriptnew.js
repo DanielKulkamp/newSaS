@@ -87,7 +87,6 @@ function saveEditedGame(event) {
 
 function displayListOfMatches(listOfMatches) {
 	let table = "<h2>Lista completa de jogos</h2><table border='1'><tr><th>#</th><th>Rodada</th><th>Mandante</th><th></th><th>x</th><th></th><th>Visitante</th><th>Data</th></tr>";
-	let lastDoneMatch = listOfMatches.filter((a) => a.done).reduce((acc, curr) => curr);
 	let firstUndone = listOfMatches.filter(a => !a.done)[0];
 	listOfMatches.forEach((game, i) => {
 
@@ -156,7 +155,7 @@ function calculateNextExpectancies(upcomingMatches, realCampaign) {
 	const visitantes = [];
 	const expectancies = [];
 
-	for (let i = 0; i < Math.min(10, upcomingMatches.length); i++) {
+	for (let i = 0; i < upcomingMatches.length; i++) {
 		let casa = realCampaign.get(upcomingMatches[i].homeTeam);
 		if (casa === undefined) {
 			casa = new Team(upcomingMatches[i].homeTeam);

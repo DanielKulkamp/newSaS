@@ -1,7 +1,7 @@
 export const DIVISOR_ELO = 400.0;
 export const IMPORTANCE = 30.0;
 export const N_SIMS = 5_000;
-export const HFA = 40;
+export const HFA = 100;
 export const PCT_VITORIA_SALDO_5 = 0.01;
 export const PCT_VITORIA_SALDO_4 = 0.06;
 export const PCT_VITORIA_SALDO_3 = 0.17;
