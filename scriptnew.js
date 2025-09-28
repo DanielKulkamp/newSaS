@@ -24,6 +24,7 @@ function displayRatings(ratings) {
         <td>${i + 1}</td>
         <td class="nome">${t.name}</td>
         <td class="number">${t.rating.toFixed(2)}</td>
+		<td>${(100.0 * t.points / (3.0 * t.matches)).toFixed(2)}%</td>
         <td>${t.points}</td>
         <td>${t.matches}</td>
         <td>${t.wins}</td>
@@ -38,6 +39,7 @@ function displayRatings(ratings) {
         <th>#</th>
         <th>time</th>
         <th>rating</th>
+		<th>aprov</th>
         <th>pg</th>
         <th>j</th>
         <th>v</th>
