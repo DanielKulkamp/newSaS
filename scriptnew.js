@@ -4,6 +4,11 @@ import { DIVISOR_ELO, IMPORTANCE, N_SIMS, HFA, PCT_VITORIA_SALDO_5, PCT_VITORIA_
 
 
 let listOfMatches;
+var t1 = 4;
+var t2 = 6;
+var t3 = 12;
+var y = 0;
+var z = 4;
 
 /**
  * Updates the: ratings and campaign panel 
@@ -173,23 +178,26 @@ function displaySummary(summary, n_sims) {
 	let table = `<h2>Resumo da Simulação</h2>
                     <table border='1'>
                     <tr><th>#</th><th>Time</th>
-                    <th>Tí­tulo</th>
-                    <th>G4</th>
-                    <th>G6</th>
-                    <th>G7-12</th>
-                    <th>G13-16</th>
-                    <th>Z4</th>
+                    <th>Título</th>
+                    <th>G${t1}</th>
+                    <th>G${t1 + 1}-${t2}</th>
+                    <th>G${t2 + 1}-${t3}</th>
+					<th>Neutro</th>
+					${y !== 0 ? '<th>Playoff</th>' : ''}
+                    <th>Z${z}</th>
                     </tr>`;
 	summary.forEach((stats, i) => {
 
 		table += `<tr><td>${i + 1}</td>
                     <td class="nome">${stats.nome}</td>
                     <td>${(100 * stats.histograma[0] / n_sims).toFixed(2)}</td>
-                    <td>${(100 * stats.histograma.slice(0, 4).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
-                    <td>${(100 * stats.histograma.slice(0, 6).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
-                    <td>${(100 * stats.histograma.slice(6, 12).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
-                    <td>${(100 * stats.histograma.slice(12, 16).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
-                    <td>${(100 * stats.histograma.slice(16, 20).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
+                    <td>${(100 * stats.histograma.slice(0, t1).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
+                    <td>${(100 * stats.histograma.slice(t1, t2).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
+                    <td>${(100 * stats.histograma.slice(t2, t3).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
+                    <td>${(100 * stats.histograma.slice(t3, stats.histograma.length - z - y).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
+					${y !== 0 ? '<td>' + (100 * stats.histograma.slice(stats.histograma.length - z - y, stats.histograma.length - z).reduce((a, b) => a + b) / n_sims).toFixed(2) + '</td>' : ''
+			}
+                    <td>${(100 * stats.histograma.slice(stats.histograma.length - z, stats.histograma.length).reduce((a, b) => a + b) / n_sims).toFixed(2)}</td>
                 </tr>`;
 	});
 	table += "</table>";
@@ -571,6 +579,12 @@ document.addEventListener('DOMContentLoaded', (_event) => {
 	const season = parametros.get('s') ?? 72034;
 	const rounds = parametros.get('r') ?? 38;
 	const n_teams = parametros.get('n') ?? 20;
+	t1 = 1 * (parametros.get('t1') ?? t1);
+	t2 = 1 * (parametros.get('t2') ?? t2);
+	t3 = 1 * (parametros.get('t3') ?? t3);
+	console.log(t1, t2, t3);
+	y = 1 * (parametros.get('y') ?? y);
+	z = 1 * (parametros.get('z') ?? z);
 	console.log(`t: ${tournament}, s: ${season}, r: ${rounds}, n: ${n_teams}`);
 
 	getListOfMatches(tournament, season, rounds).then(l => {
@@ -600,7 +614,7 @@ function displayBrierScore(summary, n_sims) {
 	let table = `<h2>Brier Score</h2>
                     <table border='1'>
                     <tr><th>#</th><th>Time</th>
-                    <th>TÃ­tulo</th>
+                    <th>Título</th>
                     <th>G4</th>
                     <th>G6</th>
                     <th>G7-12</th>
